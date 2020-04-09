@@ -2,7 +2,7 @@ module InteractiveViz
 
 using Makie
 
-export iviz, datasource, HeatmapCanvas
+export iviz, addcanvas!, datasource, HeatmapCanvas
 
 include("demo.jl")
 
@@ -17,15 +17,15 @@ end
 abstract type Canvas end
 
 Base.@kwdef struct DataSource
-  canvastype::Type
   generate!::Function
   xyrect::ℛ{Float64}       # default extents in data coordinates
+  clim::Tuple = (0.0, 1.0) # default color limits
   xmin::Float64 = -Inf64
   xmax::Float64 = Inf64
   ymin::Float64 = -Inf64
   ymax::Float64 = Inf64
-  cmin::Float64 = 0.0
-  cmax::Float64 = 1.0
+  cmin::Float64 = -Inf64
+  cmax::Float64 = Inf64
   xpan::Bool = true
   ypan::Bool = true
   cpan::Bool = true
@@ -42,6 +42,17 @@ Base.@kwdef struct Viz
   scene::Scene
   ijrect::Node{ℛ{Int}}       # size of window in pixels
   children::Vector{Canvas}
+end
+
+function Base.show(io::IO, viz::Viz)
+  display(viz.scene)
+  for c ∈ viz.children
+    update!(c; first=true, delay=0)
+  end
+end
+
+function Base.show(io::IO, c::Canvas)
+  println(io, typeof(c))
 end
 
 Base.@kwdef struct HeatmapCanvas <: Canvas
@@ -119,8 +130,22 @@ function zoomcanvas!(c, sx)
   update!(c)
 end
 
+function brighten!(c, dx)
+  clim = c.clim[]
+  r = clim[2] - clim[1]
+  c.clim[] = clim .+ r*dx
+end
+
+function contrast!(c, dx)
+  clim = c.clim[]
+  r = clim[2] - clim[1]
+  clim = clim .+ [-r*dx, r*dx]
+  clim[2] > clim[1] && (c.clim[] = (clim[1], clim[2]))
+end
+
 function resetcanvas!(c)
   c.xyrect[] = c.datasrc.xyrect
+  c.clim[] = c.datasrc.clim
   update!(c; delay=0)
 end
 
@@ -144,23 +169,23 @@ function bindevents!(c)
     ispressed(but, Keyboard.down) && pancanvas!(c, [0.0, c.ijrect[].width/8])
     ispressed(but, Keyboard.left_bracket) && zoomcanvas!(c, [1/1.2, 1/1.2])
     ispressed(but, Keyboard.right_bracket) && zoomcanvas!(c, [1.2, 1.2])
+    ispressed(but, Keyboard.equal) && brighten!(c, -0.1)
+    ispressed(but, Keyboard.minus) && brighten!(c, 0.1)
+    ispressed(but, Keyboard.period) && contrast!(c, -0.1)
+    ispressed(but, Keyboard.comma) && contrast!(c, 0.1)
     ispressed(but, Keyboard._0) && resetcanvas!(c)
   end
 end
 
-function iviz(datasrc; width=800, height=600)
-  scene = Scene(resolution=(width,height), camera=campixel!)
-  viz = Viz(
-    scene = scene,
-    ijrect = Node(ℛ(0, 0, width, height)),
-    children = Vector{Canvas}()
-  )
-  canvas = datasrc.canvastype(
+function addcanvas!(::Type{HeatmapCanvas}, viz::Viz, datasrc::DataSource)
+  width = viz.ijrect[].width
+  height = viz.ijrect[].height
+  canvas = HeatmapCanvas(
     parent = viz,
     ijhome = Node(ℛ(0, 0, width, height)),
     ijrect = Node(ℛ(0, 0, width, height)),
     xyrect = Node(datasrc.xyrect),
-    clim = Node((datasrc.cmin, datasrc.cmax)),
+    clim = Node(datasrc.clim),
     buf = Node(zeros(Float32, width, height)),
     datasrc = datasrc,
     dirty = Node{Bool}(true),
@@ -169,18 +194,25 @@ function iviz(datasrc; width=800, height=600)
   push!(viz.children, canvas)
   x = lift(r -> r.left : (r.left + r.width - 1), canvas.ijrect)
   y = lift(r -> r.bottom : (r.bottom + r.height - 1), canvas.ijrect)
-  heatmap!(scene, x, y, canvas.buf; show_axis=false, colorrange=canvas.clim)
+  heatmap!(viz.scene, x, y, canvas.buf; show_axis=false, colorrange=canvas.clim)
   bindevents!(canvas)
-  display(scene)
-  update!(canvas; first=true, delay=0)
-  viz
+  canvas
 end
 
-function datasource(::Type{HeatmapCanvas}, f, x1, y1, x2, y2)
+function iviz(; width=800, height=600)
+  scene = Scene(resolution=(width,height), camera=campixel!)
+  Viz(
+    scene = scene,
+    ijrect = Node(ℛ(0, 0, width, height)),
+    children = Vector{Canvas}()
+  )
+end
+
+function datasource(f, x1, y1, x2, y2; kwargs...)
   DataSource(
-    canvastype = HeatmapCanvas,
     generate! = f,
-    xyrect = ℛ{Float64}(x1, y1, x2-x1, y2-y1)
+    xyrect = ℛ{Float64}(x1, y1, x2-x1, y2-y1);
+    kwargs...
   )
 end
 
