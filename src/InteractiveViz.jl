@@ -131,7 +131,7 @@ function realigncanvas!(c::Canvas)
   end
 end
 
-function updatecanvas!(c::Canvas; invalidate=true, delay=0, first=false)
+function updatecanvas!(c::Canvas; invalidate=true, delay=0.25, first=false)
   invalidate && (c.dirty[] = true)
   isopen(c.parent.scene) || return
   c.dirty[] || return
@@ -231,45 +231,25 @@ function bindevents!(c::Canvas)
   end
 end
 
-function addcanvas!(::Type{HeatmapCanvas}, viz::Viz, datasrc::DataSource; pos=nothing, kwargs...)
-  width = viz.ijrect[].width
-  height = viz.ijrect[].height
-  if pos === nothing
-    ijhome = ℛ(0, 0, width, height)
-  elseif pos isa ℛ
-    ijhome = pos
-  else
-    ijhome = ℛ(pos[1], pos[2], pos[3], pos[4])
-  end
+function mkcanvas(::Type{HeatmapCanvas}, viz, ijhome, datasrc, kwargs)
   canvas = HeatmapCanvas(
     parent = viz,
     ijhome = Node(ijhome),
     ijrect = Node(ijhome),
     xyrect = Node(datasrc.xyrect),
     clim = Node(datasrc.clim),
-    buf = Node(zeros(Float32, width, height)),
+    buf = Node(zeros(Float32, ijhome.width, ijhome.height)),
     datasrc = datasrc,
     dirty = Node{Bool}(true),
     task = Ref{Task}()
   )
-  push!(viz.children, canvas)
   x = lift(r -> r.left : (r.left + r.width - 1), canvas.ijrect)
   y = lift(r -> r.bottom : (r.bottom + r.height - 1), canvas.ijrect)
   heatmap!(viz.scene, x, y, canvas.buf; show_axis=false, colorrange=canvas.clim, kwargs...)
-  bindevents!(canvas)
   canvas
 end
 
-function addcanvas!(::Type{ScatterCanvas}, viz::Viz, datasrc::DataSource; pos=nothing, kwargs...)
-  width = viz.ijrect[].width
-  height = viz.ijrect[].height
-  if pos === nothing
-    ijhome = ℛ(0, 0, width, height)
-  elseif pos isa ℛ
-    ijhome = pos
-  else
-    ijhome = ℛ(pos[1], pos[2], pos[3], pos[4])
-  end
+function mkcanvas(::Type{ScatterCanvas}, viz, ijhome, datasrc, kwargs)
   canvas = ScatterCanvas(
     parent = viz,
     ijhome = Node(ijhome),
@@ -280,9 +260,24 @@ function addcanvas!(::Type{ScatterCanvas}, viz::Viz, datasrc::DataSource; pos=no
     dirty = Node{Bool}(true),
     task = Ref{Task}()
   )
-  push!(viz.children, canvas)
   scatter!(viz.scene, canvas.buf; show_axis=false, markersize=1, kwargs...)
+  canvas
+end
+
+function addcanvas!(ctype, viz::Viz, datasrc::DataSource; pos=nothing, kwargs...)
+  width = viz.ijrect[].width
+  height = viz.ijrect[].height
+  if pos === nothing
+    ijhome = ℛ(0, 0, width, height)
+  elseif pos isa ℛ
+    ijhome = pos
+  else
+    ijhome = ℛ(pos[1], pos[2], pos[3], pos[4])
+  end
+  canvas = mkcanvas(ctype, viz, ijhome, datasrc, kwargs)
+  push!(viz.children, canvas)
   bindevents!(canvas)
+  isopen(viz.scene) && updatecanvas!(canvas; first=true, delay=0)
   canvas
 end
 
