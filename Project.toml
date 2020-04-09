@@ -1,0 +1,7 @@
+name = "InteractiveViz"
+uuid = "d14badfc-0adb-4d57-980e-37858d990fa5"
+authors = ["Mandar Chitre <mandar@nus.edu.sg>"]
+version = "0.1.0"
+
+[deps]
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
