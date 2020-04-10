@@ -2,7 +2,7 @@ module InteractiveViz
 
 using Makie, Printf
 
-export iviz, addcanvas!, overlayaxes!, datasource
+export iviz, addcanvas!, addaxes!, addcursor!, datasource
 export HeatmapCanvas, ScatterCanvas
 export apply!
 
@@ -84,7 +84,7 @@ function Base.show(io::IO, c::Canvas)
 end
 
 function ij2xy(i, j, c::Canvas)
-  ijrect = c.ijrect[]
+  ijrect = c.ijhome[]
   xyrect = c.xyrect[]
   x = (i - ijrect.left) * xyrect.width / (ijrect.width-1) + xyrect.left
   y = (j - ijrect.bottom) * xyrect.height / (ijrect.height-1) + xyrect.bottom
@@ -97,7 +97,7 @@ function ij2xy(p::Point2f0, c::Canvas)
 end
 
 function xy2ij(x, y, c::Canvas)
-  ijrect = c.ijrect[]
+  ijrect = c.ijhome[]
   xyrect = c.xyrect[]
   i = (x - xyrect.left) * (ijrect.width-1) / xyrect.width + ijrect.left
   j = (y - xyrect.bottom) * (ijrect.height-1) / xyrect.height + ijrect.bottom
@@ -266,15 +266,15 @@ function mkcanvas(::Type{ScatterCanvas}, viz, ijhome, datasrc, kwargs)
   canvas
 end
 
-function addcanvas!(ctype, viz::Viz, datasrc::DataSource; pos=nothing, kwargs...)
-  if pos === nothing
+function addcanvas!(ctype, viz::Viz, datasrc::DataSource; rect=nothing, kwargs...)
+  if rect === nothing
     ijhome = lift(r -> r, viz.ijrect)
-  elseif pos isa ℛ
-    ijhome = Node(pos)
-  elseif pos isa Node
-    ijhome = pos
+  elseif rect isa ℛ
+    ijhome = Node(rect)
+  elseif rect isa Node
+    ijhome = rect
   else
-    ijhome = Node(ℛ(pos[1], pos[2], pos[3], pos[4]))
+    ijhome = Node(ℛ(rect[1], rect[2], rect[3], rect[4]))
   end
   canvas = mkcanvas(ctype, viz, ijhome, datasrc, kwargs)
   push!(viz.children, canvas)
@@ -283,7 +283,7 @@ function addcanvas!(ctype, viz::Viz, datasrc::DataSource; pos=nothing, kwargs...
   canvas
 end
 
-function overlayaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false, border=100, bordercolor=:white, xticks=5, yticks=5, ticksize=10, textsize=15.0)
+function addaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false, border=100, bordercolor=:white, xticks=5, yticks=5, ticksize=10, textsize=15.0)
   scene = c.parent.scene
   r = lift(r -> ℛ(r.left, r.bottom, r.width-1, r.height-1), c.ijhome)
   if border > 0
@@ -312,7 +312,9 @@ function overlayaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false,
       (r.left + r.width, r.bottom + r.height)
     ], r); color=bordercolor)
   end
-  inset != 0 && (r = lift(r -> ℛ(r.left + inset, r.bottom + inset, r.width - 2*inset - 1, r.height - 2*inset - 1), c.ijhome))
+  inset != 0 && (r = lift(r -> ℛ(
+    r.left + inset, r.bottom + inset,
+    r.width - 2*inset - 1, r.height - 2*inset - 1), c.ijhome))
   if frame
     lines!(scene, lift(r -> Point2f0[
       (r.left + r.width, r.bottom),
@@ -328,7 +330,7 @@ function overlayaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false,
       (r.left, r.bottom + r.height)
     ], r); color=color)
   end
-  ticktext(k, x0, dx) = @sprintf("%.3f", x0 + k * dx)
+  xticktext(i, c) = @sprintf(" %.3f ", ij2xy(i, 0, c)[1])
   if xticks > 0
     linesegments!(scene, lift(r -> [
       Point2f0(r.left + k * r.width / xticks, r.bottom) =>
@@ -336,12 +338,13 @@ function overlayaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false,
       for k ∈ 0:xticks
     ], r); color=color)
     for k ∈ 0:xticks
-      text!(scene, lift(xy -> ticktext(k, xy.left, xy.width / xticks), c.xyrect);
+      text!(scene, lift((r, xy) -> xticktext(r.left + k * r.width / xticks, c), r, c.xyrect);
         position=lift(r -> (r.left + k * r.width / xticks, r.bottom - ticksize - textsize/2), r),
         textsize=textsize, color=color,
         align=(:center, :center))
     end
   end
+  yticktext(j, c) = @sprintf(" %.3f ", ij2xy(0, j, c)[2])
   if yticks > 0
     linesegments!(scene, lift(r -> [
       Point2f0(r.left, r.bottom + k * r.height / yticks) =>
@@ -349,20 +352,43 @@ function overlayaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false,
       for k ∈ 0:yticks
     ], r); color=color)
     for k ∈ 0:yticks
-      text!(scene, lift(xy -> ticktext(k, xy.bottom, xy.height / yticks), c.xyrect);
+      text!(scene, lift((r, xy) -> yticktext(r.bottom + k * r.height / yticks, c), r, c.xyrect);
         position=lift(r -> (float(r.left - ticksize), r.bottom + k * r.height / yticks), r),
         textsize=textsize, color=color,
         align=(:right, :center))
     end
   end
+  nothing
 end
 
-function iviz(; width=800, height=600)
+function addcursor!(c::Canvas; position=nothing, color=:black, textsize=15.0, align=(:center, :center))
+  if position === nothing
+    position = lift(r -> (r.left + r.width - 20, r.bottom + r.height - 20), c.ijhome)
+    align=(:right, :top)
+  end
+  s = Node(" ")
+  text!(c.parent.scene, s; position=position, align=align, textsize=textsize, color=color)
+  on(c.parent.scene.events.mouseposition) do ij
+    if c.ijhome[].left <= ij[1] < c.ijhome[].left + c.ijhome[].width &&
+       c.ijhome[].bottom <= ij[2] < c.ijhome[].bottom + c.ijhome[].height
+      x, y = ij2xy(ij[1], ij[2], c)
+      s[] = @sprintf(" %.3f, %.3f ", x, y)
+    else
+      s[] = " "
+    end
+  end
+  on(c.parent.scene.events.entered_window) do b
+    b || (s[] = " ")
+  end
+  nothing
+end
+
+function iviz(; width=1024, height=768)
   scene = Scene(resolution=(width,height), camera=campixel!)
   viz = Viz(
     scene = scene,
     ijrect = Node(ℛ(0, 0, width, height)),
-    children = Vector{Canvas}()
+    children = Canvas[]
   )
   on(scene.events.window_area) do win
     viz.ijrect[] = ℛ(win.origin[1], win.origin[2], win.widths[1], win.widths[2])
