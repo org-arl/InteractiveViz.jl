@@ -1,8 +1,10 @@
 module InteractiveViz
 
-using Makie
+using Makie, Printf
 
-export iviz, addcanvas!, datasource, HeatmapCanvas, ScatterCanvas, apply!
+export iviz, addcanvas!, overlayaxes!, datasource
+export HeatmapCanvas, ScatterCanvas
+export apply!
 
 include("demo.jl")
 
@@ -279,6 +281,80 @@ function addcanvas!(ctype, viz::Viz, datasrc::DataSource; pos=nothing, kwargs...
   bindevents!(canvas)
   isopen(viz.scene) && updatecanvas!(canvas; first=true, delay=0)
   canvas
+end
+
+function overlayaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false, border=100, bordercolor=:white, xticks=5, yticks=5, ticksize=10, textsize=15.0)
+  scene = c.parent.scene
+  r = lift(r -> ℛ(r.left, r.bottom, r.width-1, r.height-1), c.ijhome)
+  if border > 0
+    poly!(scene, lift(r -> Point2f0[
+      (r.left - border, r.bottom),
+      (r.left + r.width + border, r.bottom),
+      (r.left + r.width + border, r.bottom - border),
+      (r.left - border, r.bottom - border)
+    ], r); color=bordercolor)
+    poly!(scene, lift(r -> Point2f0[
+      (r.left - border, r.bottom + r.height),
+      (r.left + r.width + border, r.bottom + r.height),
+      (r.left + r.width + border, r.bottom + r.height + border),
+      (r.left - border, r.bottom + r.height + border)
+    ], r); color=bordercolor)
+    poly!(scene, lift(r -> Point2f0[
+      (r.left, r.bottom),
+      (r.left - border, r.bottom),
+      (r.left - border, r.bottom + r.height),
+      (r.left, r.bottom + r.height)
+    ], r); color=bordercolor)
+    poly!(scene, lift(r -> Point2f0[
+      (r.left + r.width, r.bottom),
+      (r.left + r.width + border, r.bottom),
+      (r.left + r.width + border, r.bottom + r.height),
+      (r.left + r.width, r.bottom + r.height)
+    ], r); color=bordercolor)
+  end
+  inset != 0 && (r = lift(r -> ℛ(r.left + inset, r.bottom + inset, r.width - 2*inset - 1, r.height - 2*inset - 1), c.ijhome))
+  if frame
+    lines!(scene, lift(r -> Point2f0[
+      (r.left + r.width, r.bottom),
+      (r.left, r.bottom),
+      (r.left, r.bottom + r.height),
+      (r.left + r.width, r.bottom + r.height),
+      (r.left + r.width, r.bottom)
+    ], r); color=color)
+  else
+    lines!(scene, lift(r -> Point2f0[
+      (r.left + r.width, r.bottom),
+      (r.left, r.bottom),
+      (r.left, r.bottom + r.height)
+    ], r); color=color)
+  end
+  ticktext(k, x0, dx) = @sprintf("%.3f", x0 + k * dx)
+  if xticks > 0
+    linesegments!(scene, lift(r -> [
+      Point2f0(r.left + k * r.width / xticks, r.bottom) =>
+      Point2f0(r.left + k * r.width / xticks, r.bottom - ticksize)
+      for k ∈ 0:xticks
+    ], r); color=color)
+    for k ∈ 0:xticks
+      text!(scene, lift(xy -> ticktext(k, xy.left, xy.width / xticks), c.xyrect);
+        position=lift(r -> (r.left + k * r.width / xticks, r.bottom - ticksize - textsize/2), r),
+        textsize=textsize, color=color,
+        align=(:center, :center))
+    end
+  end
+  if yticks > 0
+    linesegments!(scene, lift(r -> [
+      Point2f0(r.left, r.bottom + k * r.height / yticks) =>
+      Point2f0(r.left - ticksize, r.bottom + k * r.height / yticks)
+      for k ∈ 0:yticks
+    ], r); color=color)
+    for k ∈ 0:yticks
+      text!(scene, lift(xy -> ticktext(k, xy.bottom, xy.height / yticks), c.xyrect);
+        position=lift(r -> (float(r.left - ticksize), r.bottom + k * r.height / yticks), r),
+        textsize=textsize, color=color,
+        align=(:right, :center))
+    end
+  end
 end
 
 function iviz(; width=800, height=600)
