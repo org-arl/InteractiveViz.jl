@@ -376,7 +376,11 @@ function addcursor!(c::Canvas; position=nothing, color=:black, textsize=15.0, al
     if c.ijhome[].left <= ij[1] < c.ijhome[].left + c.ijhome[].width &&
        c.ijhome[].bottom <= ij[2] < c.ijhome[].bottom + c.ijhome[].height
       x, y = ij2xy(ij[1], ij[2], c)
-      s[] = @sprintf(" %.3f, %.3f ", x, y)
+      if c isa HeatmapCanvas
+        s[] = @sprintf(" %.3f, %.3f, %.3f ", x, y, c.buf[][round(Int, ij[1]), round(Int, ij[2])])
+      else
+        s[] = @sprintf(" %.3f, %.3f ", x, y)
+      end
     else
       s[] = " "
     end
