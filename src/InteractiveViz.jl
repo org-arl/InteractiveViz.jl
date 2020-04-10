@@ -46,17 +46,6 @@ Base.@kwdef struct Viz
   children::Vector{Canvas}
 end
 
-function Base.show(io::IO, viz::Viz)
-  display(viz.scene)
-  for c ∈ viz.children
-    updatecanvas!(c; first=true, delay=0)
-  end
-end
-
-function Base.show(io::IO, c::Canvas)
-  println(io, typeof(c))
-end
-
 Base.@kwdef struct HeatmapCanvas <: Canvas
   parent::Viz
   ijhome::Node{ℛ{Int}}       # home location for canvas in pixels
@@ -80,11 +69,23 @@ Base.@kwdef struct ScatterCanvas <: Canvas
   task::Ref{Task}
 end
 
+function Base.show(io::IO, viz::Viz)
+  #isopen(viz.scene) && return
+  display(viz.scene)
+  for c ∈ viz.children
+    updatecanvas!(c; first=true, delay=0)
+  end
+end
+
+function Base.show(io::IO, c::Canvas)
+  println(io, typeof(c))
+end
+
 function ij2xy(i, j, c::Canvas)
   ijrect = c.ijrect[]
   xyrect = c.xyrect[]
-  x = (i - ijrect.left) * xyrect.width / ijrect.width + xyrect.left
-  y = (j - ijrect.bottom) * xyrect.height / ijrect.height + xyrect.bottom
+  x = (i - ijrect.left) * xyrect.width / (ijrect.width-1) + xyrect.left
+  y = (j - ijrect.bottom) * xyrect.height / (ijrect.height-1) + xyrect.bottom
   (x, y)
 end
 
@@ -96,8 +97,8 @@ end
 function xy2ij(x, y, c::Canvas)
   ijrect = c.ijrect[]
   xyrect = c.xyrect[]
-  i = (x - xyrect.left) * ijrect.width / xyrect.width + ijrect.left
-  j = (y - xyrect.bottom) * ijrect.height / xyrect.height + ijrect.bottom
+  i = (x - xyrect.left) * (ijrect.width-1) / xyrect.width + ijrect.left
+  j = (y - xyrect.bottom) * (ijrect.height-1) / xyrect.height + ijrect.bottom
   (i, j)
 end
 
@@ -146,7 +147,7 @@ function updatecanvas!(c::Canvas; invalidate=true, delay=0.25, first=false)
   end
 end
 
-function pancanvas!(c::Canvas, dx)
+function pancanvas!(c::Canvas, dx; rubberband=true)
   c.datasrc.xpan || c.datasrc.ypan || return
   c.datasrc.xpan || dx[1] == 0 || (dx = [0, dx[2]])
   c.datasrc.ypan || dx[2] == 0 || (dx = [dx[1], 0])
@@ -157,11 +158,11 @@ function pancanvas!(c::Canvas, dx)
     ijrect.width,
     ijrect.height
   )
-  c.datasrc.rubberband || realign!(c)
+  (c.datasrc.rubberband && rubberband) || realigncanvas!(c)
   updatecanvas!(c)
 end
 
-function zoomcanvas!(c::Canvas, sx)
+function zoomcanvas!(c::Canvas, sx; rubberband=true)
   c.datasrc.xzoom || c.datasrc.yzoom || return
   c.datasrc.xzoom || sx[1] == 1 || (sx = [1, sx[2]])
   c.datasrc.yzoom || sx[2] == 1 || (sx = [sx[1], 1])
@@ -176,7 +177,7 @@ function zoomcanvas!(c::Canvas, sx)
     round(Int, width),
     round(Int, height)
   )
-  c.datasrc.rubberband || realign!(c)
+  (c.datasrc.rubberband && rubberband) || realigncanvas!(c)
   updatecanvas!(c)
 end
 
@@ -202,17 +203,6 @@ function resetcanvas!(c::Canvas)
 end
 
 function bindevents!(c::Canvas)
-  on(c.parent.scene.events.window_area) do win
-    if c.ijhome[].left == 0 && c.ijhome[].bottom == 0
-      xyrect = c.xyrect[]
-      xscale = xyrect.width / c.ijrect[].width
-      yscale = xyrect.height / c.ijrect[].height
-      c.ijhome[] = ℛ(win.origin[1], win.origin[2], win.widths[1], win.widths[2])
-      c.ijrect[] = c.ijhome[]
-      c.xyrect[] = ℛ(xyrect.left, xyrect.bottom, xscale*win.widths[1], yscale*win.widths[2])
-      updatecanvas!(c)
-    end
-  end
   on(c.parent.scene.events.scroll) do dx
     pancanvas!(c, dx)
   end
@@ -234,11 +224,11 @@ end
 function mkcanvas(::Type{HeatmapCanvas}, viz, ijhome, datasrc, kwargs)
   canvas = HeatmapCanvas(
     parent = viz,
-    ijhome = Node(ijhome),
-    ijrect = Node(ijhome),
+    ijhome = ijhome,
+    ijrect = Node(ijhome[]),
     xyrect = Node(datasrc.xyrect),
     clim = Node(datasrc.clim),
-    buf = Node(zeros(Float32, ijhome.width, ijhome.height)),
+    buf = Node(zeros(Float32, ijhome[].width, ijhome[].height)),
     datasrc = datasrc,
     dirty = Node{Bool}(true),
     task = Ref{Task}()
@@ -246,14 +236,24 @@ function mkcanvas(::Type{HeatmapCanvas}, viz, ijhome, datasrc, kwargs)
   x = lift(r -> r.left : (r.left + r.width - 1), canvas.ijrect)
   y = lift(r -> r.bottom : (r.bottom + r.height - 1), canvas.ijrect)
   heatmap!(viz.scene, x, y, canvas.buf; show_axis=false, colorrange=canvas.clim, kwargs...)
+  on(ijhome) do r
+    xscale = canvas.xyrect[].width/canvas.ijrect[].width
+    yscale = canvas.xyrect[].height/canvas.ijrect[].height
+    canvas.ijrect[] = r
+    canvas.xyrect[] = ℛ(
+      canvas.xyrect[].left, canvas.xyrect[].bottom,
+      xscale * canvas.ijrect[].width, yscale * canvas.ijrect[].height)
+    canvas.buf[] = zeros(Float32, r.width, r.height)
+    updatecanvas!(canvas)
+  end
   canvas
 end
 
 function mkcanvas(::Type{ScatterCanvas}, viz, ijhome, datasrc, kwargs)
   canvas = ScatterCanvas(
     parent = viz,
-    ijhome = Node(ijhome),
-    ijrect = Node(ijhome),
+    ijhome = ijhome,
+    ijrect = Node(ijhome[]),
     xyrect = Node(datasrc.xyrect),
     buf = Node(Vector{Point2f0}()),
     datasrc = datasrc,
@@ -265,14 +265,14 @@ function mkcanvas(::Type{ScatterCanvas}, viz, ijhome, datasrc, kwargs)
 end
 
 function addcanvas!(ctype, viz::Viz, datasrc::DataSource; pos=nothing, kwargs...)
-  width = viz.ijrect[].width
-  height = viz.ijrect[].height
   if pos === nothing
-    ijhome = ℛ(0, 0, width, height)
+    ijhome = lift(r -> r, viz.ijrect)
   elseif pos isa ℛ
+    ijhome = Node(pos)
+  elseif pos isa Node
     ijhome = pos
   else
-    ijhome = ℛ(pos[1], pos[2], pos[3], pos[4])
+    ijhome = Node(ℛ(pos[1], pos[2], pos[3], pos[4]))
   end
   canvas = mkcanvas(ctype, viz, ijhome, datasrc, kwargs)
   push!(viz.children, canvas)
@@ -283,11 +283,15 @@ end
 
 function iviz(; width=800, height=600)
   scene = Scene(resolution=(width,height), camera=campixel!)
-  Viz(
+  viz = Viz(
     scene = scene,
     ijrect = Node(ℛ(0, 0, width, height)),
     children = Vector{Canvas}()
   )
+  on(scene.events.window_area) do win
+    viz.ijrect[] = ℛ(win.origin[1], win.origin[2], win.widths[1], win.widths[2])
+  end
+  viz
 end
 
 function datasource(f, x1, y1, x2, y2; kwargs...)
