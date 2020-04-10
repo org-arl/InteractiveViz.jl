@@ -134,7 +134,7 @@ function realigncanvas!(c::Canvas)
   end
 end
 
-function updatecanvas!(c::Canvas; invalidate=true, delay=0.25, first=false)
+function updatecanvas!(c::Canvas; invalidate=true, delay=0.1, first=false)
   invalidate && (c.dirty[] = true)
   isopen(c.parent.scene) || return
   c.dirty[] || return
@@ -257,12 +257,16 @@ function mkcanvas(::Type{ScatterCanvas}, viz, ijhome, datasrc, kwargs)
     ijhome = ijhome,
     ijrect = Node(ijhome[]),
     xyrect = Node(datasrc.xyrect),
-    buf = Node(Vector{Point2f0}()),
+    buf = Node(Point2f0[]),
     datasrc = datasrc,
     dirty = Node{Bool}(true),
     task = Ref{Task}()
   )
-  scatter!(viz.scene, canvas.buf; show_axis=false, markersize=1, kwargs...)
+  if :markersize ∈ keys(kwargs)
+    scatter!(viz.scene, canvas.buf; show_axis=false, kwargs...)
+  else
+    scatter!(viz.scene, canvas.buf; show_axis=false, markersize=1, kwargs...)
+  end
   canvas
 end
 
@@ -283,7 +287,7 @@ function addcanvas!(ctype, viz::Viz, datasrc::DataSource; rect=nothing, kwargs..
   canvas
 end
 
-function addaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false, border=100, bordercolor=:white, xticks=5, yticks=5, ticksize=10, textsize=15.0)
+function addaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false, border=0, bordercolor=:white, xticks=5, yticks=5, ticksize=10, textsize=15.0)
   scene = c.parent.scene
   r = lift(r -> ℛ(r.left, r.bottom, r.width-1, r.height-1), c.ijhome)
   if border > 0
@@ -404,13 +408,33 @@ function datasource(f, x1, y1, x2, y2; kwargs...)
   )
 end
 
-function apply!(f::Function, buf, canvas::Canvas)
+function apply!(f::Function, buf::AbstractMatrix, c::Canvas)
   for j ∈ 1:size(buf,2)
     for i ∈ 1:size(buf,1)
-      x, y = ij2xy(i, j, canvas)
+      x, y = ij2xy(i, j, c)
       buf[i,j] = f(x, y)
     end
   end
+end
+
+function sample!(buf::AbstractVector{Point2f0}, c::Canvas)
+  data = c.datasrc.data
+  data === missing && return
+  xyrect = c.xyrect[]
+  p = 0
+  for k in 1:size(data,1)
+    if xyrect.left <= data[k,1] < xyrect.left + xyrect.width && xyrect.bottom <= data[k,2] < xyrect.bottom + xyrect.height
+      ij = xy2ij(Point2f0(data[k,1], data[k,2]), c)
+      if p < length(buf)
+        p += 1
+        buf[p] = ij
+      else
+        push!(buf, ij)
+        p = length(buf)
+      end
+    end
+  end
+  p < length(buf) && splice!(buf, p+1:length(buf))
 end
 
 end # module
