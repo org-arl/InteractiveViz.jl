@@ -8,6 +8,7 @@ function ifigure(; width=1024, height=768, hold=false, show=true)
   curviz[] = Viz(
     scene = Scene(resolution=(width,height), camera=campixel!),
     ijrect = Node(ℛ(0, 0, width, height)),
+    selrect = Node(ℛ(0, 0, width, height)),
     children = Canvas[]
   )
   show && display(curviz[].scene)
@@ -16,6 +17,13 @@ function ifigure(; width=1024, height=768, hold=false, show=true)
   end
   on(curviz[].scene.events.window_open) do b
     b || (curviz[] = nothing)
+  end
+  on(select_rectangle(curviz[].scene)) do r
+    curviz[].selrect[] = ℛ(
+      round(Int, r.origin[1]),
+      round(Int, r.origin[2]),
+      round(Int, r.widths[1]),
+      round(Int, r.widths[2]))
   end
   curviz[]
 end
@@ -31,6 +39,12 @@ end
 function ij2xy(p::Point2f0, c::Canvas)
   x, y = ij2xy(p[1], p[2], c)
   Point2f0(x, y)
+end
+
+function ij2xy(p::ℛ, c::Canvas)
+  x1, y1 = ij2xy(p.left, p.bottom, c)
+  x2, y2 = ij2xy(p.left + p.width, p.bottom + p.height, c)
+  ℛ(x1, y1, x2-x1, y2-y1)
 end
 
 function xy2ij(x, y, c::Canvas)
@@ -120,6 +134,22 @@ function zoomcanvas!(c::Canvas, sx; rubberband=true)
   updatecanvas!(c)
 end
 
+function zoomcanvas!(c::Canvas, xyrect::ℛ)
+  c.datasrc.xzoom || c.datasrc.yzoom || return
+  if c.datasrc.xylock
+    ratio = c.xyrect[].width / c.xyrect[].height
+    if xyrect.width / xyrect.height > ratio
+      xyrect = ℛ(xyrect.left, xyrect.bottom, xyrect.width, xyrect.width / ratio)
+    else
+      xyrect = ℛ(xyrect.left, xyrect.bottom, xyrect.height * ratio, xyrect.height)
+    end
+  end
+  c.datasrc.xzoom || (xyrect = ℛ(c.xyrect[].left, xyrect.bottom, c.xyrect[].width, xyrect.height))
+  c.datasrc.yzoom || (xyrect = ℛ(xyrect.left, c.xyrect[].bottom, xyrect.width, c.xyrect[].height))
+  c.xyrect[] = xyrect
+  updatecanvas!(c)
+end
+
 function brighten!(c::Canvas, dx)
   isdefined(c, :clim) || return
   clim = c.clim[]
@@ -166,6 +196,16 @@ function bindevents!(c::Canvas)
     ispressed(but, Keyboard.semicolon) && contrast!(c, -0.1)
     ispressed(but, Keyboard.apostrophe) && contrast!(c, 0.1)
     ispressed(but, Keyboard._0) && resetcanvas!(c)
+  end
+  on(c.parent.selrect) do r
+    margin = 100
+    ijrect = c.ijrect[]
+    ijrect.left - margin <= r.left <= ijrect.left + ijrect.width + margin || return
+    ijrect.bottom - margin <= r.bottom <= ijrect.bottom + ijrect.height + margin || return
+    ijrect.left - margin <= r.left + r.width <= ijrect.left + ijrect.width + margin || return
+    ijrect.bottom - margin <= r.bottom + r.height <= ijrect.bottom + ijrect.height + margin || return
+    xyrect = ij2xy(r, c)
+    zoomcanvas!(c, xyrect)
   end
 end
 

@@ -36,6 +36,7 @@ end
 Base.@kwdef struct Viz
   scene::Scene
   ijrect::Node{ℛ{Int}}       # size of window in pixels
+  selrect::Node{ℛ{Int}}      # last selected rectangle
   children::Vector{Canvas}
 end
 
