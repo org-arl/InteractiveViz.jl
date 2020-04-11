@@ -21,7 +21,7 @@ function iplot(x::AbstractVector, y::AbstractVector, x1=missing, x2=missing, y1=
   x2 <= x1 && error("Bad x range")
   y2 <= y1 && error("Bad y range")
   datasrc = DataSource(
-    generate! = subset!,
+    generate! = x isa AbstractRange ? linepool! : linecrop!,
     xyrect = ℛ{Float64}(x1, y1, x2-x1, y2-y1),
     xylock = xylock,
     xmin = minimum(x),
@@ -41,7 +41,7 @@ function iplot!(x::AbstractVector, y::AbstractVector; kwargs...)
   length(viz.children) == 0 && error("No previous canvas available to plot over")
   prev = viz.children[end]
   datasrc = DataSource(
-    generate! = subset!,
+    generate! = linecrop!,
     xyrect = prev.datasrc.xyrect,
     xylock = prev.datasrc.xylock,
     data = hcat(x, y)
@@ -103,7 +103,7 @@ function iscatter(x::AbstractVector, y::AbstractVector, x1=missing, x2=missing, 
   x2 <= x1 && error("Bad x range")
   y2 <= y1 && error("Bad y range")
   datasrc = DataSource(
-    generate! = aggregate ? aggregate! : subset!,
+    generate! = aggregate ? aggregate! : pointcrop!,
     xyrect = ℛ{Float64}(x1, y1, x2-x1, y2-y1),
     xylock = xylock,
     xmin = minimum(x),
@@ -130,7 +130,7 @@ function iscatter!(x::AbstractVector, y::AbstractVector; kwargs...)
   length(viz.children) == 0 && error("No previous canvas available to plot over")
   prev = viz.children[end]
   datasrc = DataSource(
-    generate! = subset!,
+    generate! = pointcrop!,
     xyrect = prev.datasrc.xyrect,
     xylock = prev.datasrc.xylock,
     data = hcat(x, y)

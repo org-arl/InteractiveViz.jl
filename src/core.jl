@@ -251,6 +251,7 @@ end
 # TODO: add support for xlabel, ylabel, title
 # TODO: add support for legend
 # TODO: add support for colorbar
+# TODO: improve tick formatting
 
 # TODO: add support for grid
 function addaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false, border=0, bordercolor=:white, xticks=5, yticks=5, ticksize=10, textsize=15.0)
