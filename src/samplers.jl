@@ -1,4 +1,4 @@
-export apply!, subset!
+export apply!, subset!, aggregate!
 
 function apply!(f::Function, buf::AbstractMatrix, c::Canvas)
   for j ∈ 1:size(buf,2)
@@ -44,6 +44,16 @@ function subset!(buf::AbstractVector{Point2f0}, c::Canvas)
   length(buf) < 1 && push!(buf, Point2f0(Inf32, Inf32))  # needed because Makie does not like 0-point lines
 end
 
+function aggregate!(buf::AbstractMatrix, c::Canvas)
+  m, n = size(buf)
+  buf .= zero(buf[1,1])
+  data = c.datasrc.data
+  for k ∈ 1:size(data,1)
+    i, j = xy2ij(Int, data[k,1], data[k,2], c)
+    0 <= i < m && 0 <= j < n && (buf[i+1, j+1] += 1)
+  end
+  # TODO: add support for spreading?
+end
 ### helpers
 
 function set!(buf, p, pt)

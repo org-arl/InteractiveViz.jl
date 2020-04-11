@@ -88,7 +88,7 @@ function iplot!(f::Function; data=missing, kwargs...)
   c
 end
 
-function iscatter(x::AbstractVector, y::AbstractVector, x1=missing, x2=missing, y1=missing, y2=missing; xylock=false, axes=true, axescolor=:black, overlay=false, cursor=false, kwargs...)
+function iscatter(x::AbstractVector, y::AbstractVector, x1=missing, x2=missing, y1=missing, y2=missing; aggregate=false, xylock=true, axes=true, axescolor=:black, overlay=false, cursor=false, kwargs...)
   length(x) != length(y) && error("x and y must be of equal length")
   if x1 === missing || x2 === missing
     x1a, x2a = autorange(x)
@@ -103,7 +103,7 @@ function iscatter(x::AbstractVector, y::AbstractVector, x1=missing, x2=missing, 
   x2 <= x1 && error("Bad x range")
   y2 <= y1 && error("Bad y range")
   datasrc = DataSource(
-    generate! = subset!,
+    generate! = aggregate ? aggregate! : subset!,
     xyrect = ℛ{Float64}(x1, y1, x2-x1, y2-y1),
     xylock = xylock,
     xmin = minimum(x),
@@ -114,7 +114,12 @@ function iscatter(x::AbstractVector, y::AbstractVector, x1=missing, x2=missing, 
   )
   viz = ifigure()
   ijrect = axes && !overlay ? inset(viz.ijrect, 100, 50, 100, 50) : viz.ijrect
-  c = addcanvas!(ScatterCanvas, viz, datasrc; rect=ijrect, kwargs...)
+  if aggregate
+    haskey(kwargs, :colormap) || (kwargs = merge(Dict((:colormap => :Greys)), kwargs))
+    c = addcanvas!(HeatmapCanvas, viz, datasrc; rect=ijrect, kwargs...)
+  else
+    c = addcanvas!(ScatterCanvas, viz, datasrc; rect=ijrect, kwargs...)
+  end
   axes && addaxes!(c; color=axescolor, inset = overlay ? 100 : 0, border = overlay ? 0 : 150)
   cursor && addcursor!(c, color=axescolor)
   c
