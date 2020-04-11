@@ -1,5 +1,5 @@
-export ifigure, canvas, addaxes!, addcursor!, datasource
-export HeatmapCanvas, ScatterCanvas
+export ifigure, addcanvas!, addaxes!, addcursor!
+export HeatmapCanvas, ScatterCanvas, LineCanvas
 
 const curviz = Ref{Union{Viz,Nothing}}(nothing)
 
@@ -239,6 +239,11 @@ function addcanvas!(ctype, viz::Viz, datasrc::DataSource; rect=nothing, kwargs..
   canvas
 end
 
+# TODO: add support for xlabel, ylabel, title
+# TODO: add support for legend
+# TODO: add support for colorbar
+
+# TODO: add support for grid
 function addaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false, border=0, bordercolor=:white, xticks=5, yticks=5, ticksize=10, textsize=15.0)
   scene = c.parent.scene
   r = lift(r -> ℛ(r.left, r.bottom, r.width-1, r.height-1), c.ijhome)
@@ -341,12 +346,4 @@ function addcursor!(c::Canvas; position=nothing, color=:black, textsize=15.0, al
     b || (s[] = " ")
   end
   nothing
-end
-
-function datasource(f, x1, y1, x2, y2; kwargs...)
-  DataSource(
-    generate! = f,
-    xyrect = ℛ{Float64}(x1, y1, x2-x1, y2-y1);
-    kwargs...
-  )
 end
