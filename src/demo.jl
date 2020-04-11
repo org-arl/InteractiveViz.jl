@@ -1,5 +1,3 @@
-module Demo
-
 export mandelbrot
 
 function mandelbrot(x, y, n=100)
@@ -11,5 +9,3 @@ function mandelbrot(x, y, n=100)
   end
   return 1.0
 end
-
-end # module
