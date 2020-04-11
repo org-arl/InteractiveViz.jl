@@ -1,12 +1,28 @@
 export iplot, iplot!, iscatter, iscatter!, iheatmap
 
-# TODO: add support for multichannel plots
+const bgcolor = RGB(1,1,1)
+
 # TODO: add support for SignalBuf
 
-iplot(y::AbstractVector; kwargs...) = iplot(1:length(y), y; kwargs...)
-iplot!(y::AbstractVector; kwargs...) = iplot!(1:length(y), y; kwargs...)
+iplot(y::AbstractVecOrMat, args...; kwargs...) = iplot(1:size(y,1), y, args...; kwargs...)
+iplot!(y::AbstractVecOrMat; kwargs...) = iplot!(1:size(y,1), y; kwargs...)
 
-function iplot(x::AbstractVector, y::AbstractVector, x1=missing, x2=missing, y1=missing, y2=missing; xylock=false, axes=true, axescolor=:black, overlay=false, cursor=false, kwargs...)
+function iplot(x::AbstractVector, y::AbstractMatrix, args...; kwargs...)
+  colors = distinguishable_colors(size(y,2)+1, [bgcolor])
+  iplot(x, y[:,1], args...; color=colors[2], kwargs...)
+  for k ∈ 2:size(y,2)
+    iplot!(x, y[:,k]; color=colors[1+k], kwargs...)
+  end
+end
+
+function iplot!(x::AbstractVector, y::AbstractMatrix; kwargs...)
+  colors = distinguishable_colors(size(y,2)+1, [bgcolor])
+  for k ∈ 1:size(y,2)
+    iplot!(x, y[:,k]; color=colors[1+k], kwargs...)
+  end
+end
+
+function iplot(x::AbstractVector, y::AbstractVector, x1=missing, x2=missing, y1=missing, y2=missing; xylock=false, axes=true, axescolor=:black, grid=false, overlay=false, cursor=false, kwargs...)
   length(x) != size(y,1) && error("x and y must be of equal length")
   if x1 === missing || x2 === missing
     x1a, x2a = autorange(x)
@@ -31,7 +47,7 @@ function iplot(x::AbstractVector, y::AbstractVector, x1=missing, x2=missing, y1=
   viz = ifigure()
   ijrect = axes && !overlay ? inset(viz.ijrect, 100, 50, 100, 50) : viz.ijrect
   c = addcanvas!(LineCanvas, viz, datasrc; rect=ijrect, kwargs...)
-  axes && addaxes!(c; color=axescolor, inset = overlay ? 100 : 0, border = overlay ? 0 : 150)
+  axes && addaxes!(c; color=axescolor, grid=grid, inset = overlay ? 100 : 0, border = overlay ? 0 : 150)
   cursor && addcursor!(c, color=axescolor)
   c
 end
@@ -51,7 +67,7 @@ function iplot!(x::AbstractVector, y::AbstractVector; kwargs...)
   c
 end
 
-function iplot(f::Function, x1=0.0, x2=1.0, y1=missing, y2=missing; xylock=false, axes=true, axescolor=:black, overlay=false, cursor=false, data=missing, kwargs...)
+function iplot(f::Function, x1=0.0, x2=1.0, y1=missing, y2=missing; xylock=false, axes=true, axescolor=:black, grid=false, overlay=false, cursor=false, data=missing, kwargs...)
   x2 <= x1 && error("Bad x range")
   if y1 === missing || y2 === missing
     y1a, y2a = autorange(f.(x1 .+ rand(1000)*(x2-x1)), 0.1)
@@ -68,7 +84,7 @@ function iplot(f::Function, x1=0.0, x2=1.0, y1=missing, y2=missing; xylock=false
   viz = ifigure()
   ijrect = axes && !overlay ? inset(viz.ijrect, 100, 50, 100, 50) : viz.ijrect
   c = addcanvas!(LineCanvas, viz, datasrc; rect=ijrect, kwargs...)
-  axes && addaxes!(c; color=axescolor, inset = overlay ? 100 : 0, border = overlay ? 0 : 150)
+  axes && addaxes!(c; color=axescolor, grid=grid, inset = overlay ? 100 : 0, border = overlay ? 0 : 150)
   cursor && addcursor!(c, color=axescolor)
   c
 end
@@ -88,7 +104,7 @@ function iplot!(f::Function; data=missing, kwargs...)
   c
 end
 
-function iscatter(x::AbstractVector, y::AbstractVector, x1=missing, x2=missing, y1=missing, y2=missing; aggregate=false, xylock=true, axes=true, axescolor=:black, overlay=false, cursor=false, kwargs...)
+function iscatter(x::AbstractVector, y::AbstractVector, x1=missing, x2=missing, y1=missing, y2=missing; aggregate=false, xylock=true, axes=true, axescolor=:black, grid=false, overlay=false, cursor=false, kwargs...)
   length(x) != length(y) && error("x and y must be of equal length")
   if x1 === missing || x2 === missing
     x1a, x2a = autorange(x)
@@ -120,7 +136,7 @@ function iscatter(x::AbstractVector, y::AbstractVector, x1=missing, x2=missing, 
   else
     c = addcanvas!(ScatterCanvas, viz, datasrc; rect=ijrect, kwargs...)
   end
-  axes && addaxes!(c; color=axescolor, inset = overlay ? 100 : 0, border = overlay ? 0 : 150)
+  axes && addaxes!(c; color=axescolor, grid=grid, inset = overlay ? 100 : 0, border = overlay ? 0 : 150)
   cursor && addcursor!(c, color=axescolor)
   c
 end
@@ -141,10 +157,10 @@ function iscatter!(x::AbstractVector, y::AbstractVector; kwargs...)
 end
 
 function iheatmap(z::AbstractMatrix)
-  # TODO
+  # TODO: implement heatmaps
 end
 
-function iheatmap(f::Function, x1=0.0, x2=1.3, y1=0.0, y2=1.0; xylock=true, axes=true, axescolor=:black, overlay=false, cursor=false, data=missing, kwargs...)
+function iheatmap(f::Function, x1=0.0, x2=1.3, y1=0.0, y2=1.0; xylock=true, axes=true, axescolor=:black, grid=false, overlay=false, cursor=false, data=missing, kwargs...)
   x2 <= x1 && error("Bad x range")
   y2 <= y1 && error("Bad y range")
   viz = ifigure()
@@ -156,7 +172,7 @@ function iheatmap(f::Function, x1=0.0, x2=1.3, y1=0.0, y2=1.0; xylock=true, axes
   )
   ijrect = axes && !overlay ? inset(viz.ijrect, 100, 50, 100, 50) : viz.ijrect
   c = addcanvas!(HeatmapCanvas, viz, datasrc; rect=ijrect, kwargs...)
-  axes && addaxes!(c; color=axescolor, inset = overlay ? 100 : 0, border = overlay ? 0 : 150)
+  axes && addaxes!(c; grid=grid, color=axescolor, inset = overlay ? 100 : 0, border = overlay ? 0 : 150)
   cursor && addcursor!(c, color=axescolor)
   c
 end

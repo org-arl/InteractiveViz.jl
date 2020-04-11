@@ -2,6 +2,7 @@ module InteractiveViz
 
 using Makie
 using Printf
+using Colors
 
 include("types.jl")
 include("core.jl")

@@ -136,6 +136,8 @@ end
 
 function zoomcanvas!(c::Canvas, xyrect::ℛ)
   c.datasrc.xzoom || c.datasrc.yzoom || return
+  c.datasrc.xzoom || (xyrect = ℛ(c.xyrect[].left, xyrect.bottom, c.xyrect[].width, xyrect.height))
+  c.datasrc.yzoom || (xyrect = ℛ(xyrect.left, c.xyrect[].bottom, xyrect.width, c.xyrect[].height))
   if c.datasrc.xylock
     ratio = c.xyrect[].width / c.xyrect[].height
     if xyrect.width / xyrect.height > ratio
@@ -144,8 +146,6 @@ function zoomcanvas!(c::Canvas, xyrect::ℛ)
       xyrect = ℛ(xyrect.left, xyrect.bottom, xyrect.height * ratio, xyrect.height)
     end
   end
-  c.datasrc.xzoom || (xyrect = ℛ(c.xyrect[].left, xyrect.bottom, c.xyrect[].width, xyrect.height))
-  c.datasrc.yzoom || (xyrect = ℛ(xyrect.left, c.xyrect[].bottom, xyrect.width, c.xyrect[].height))
   c.xyrect[] = xyrect
   updatecanvas!(c)
 end
@@ -293,7 +293,6 @@ end
 # TODO: add support for colorbar
 # TODO: improve tick formatting
 
-# TODO: add support for grid
 function addaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false, border=0, bordercolor=:white, xticks=5, yticks=5, ticksize=10, textsize=15.0)
   scene = c.parent.scene
   r = lift(r -> ℛ(r.left, r.bottom, r.width-1, r.height-1), c.ijhome)
@@ -348,6 +347,11 @@ function addaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false, bor
       Point2f0(r.left + k * r.width / xticks, r.bottom - ticksize)
       for k ∈ 0:xticks
     ], r); show_axis=false, color=color)
+    grid && linesegments!(scene, lift(r -> [
+      Point2f0(r.left + k * r.width / xticks, r.bottom) =>
+      Point2f0(r.left + k * r.width / xticks, r.bottom + r.height)
+      for k ∈ 0:xticks
+    ], r); show_axis=false, color=color, linestyle=:dot)
     for k ∈ 0:xticks
       text!(scene, lift((r, xy) -> xticktext(r.left + k * r.width / xticks, c), r, c.xyrect);
         position=lift(r -> (r.left + k * r.width / xticks, r.bottom - ticksize - textsize/2), r),
@@ -362,6 +366,11 @@ function addaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false, bor
       Point2f0(r.left - ticksize, r.bottom + k * r.height / yticks)
       for k ∈ 0:yticks
     ], r); show_axis=false, color=color)
+    grid && linesegments!(scene, lift(r -> [
+      Point2f0(r.left, r.bottom + k * r.height / yticks) =>
+      Point2f0(r.left + r.width, r.bottom + k * r.height / yticks)
+      for k ∈ 0:yticks
+    ], r); show_axis=false, color=color, linestyle=:dot)
     for k ∈ 0:yticks
       text!(scene, lift((r, xy) -> yticktext(r.bottom + k * r.height / yticks, c), r, c.xyrect);
         position=lift(r -> (float(r.left - ticksize), r.bottom + k * r.height / yticks), r),
