@@ -124,14 +124,14 @@ function brighten!(c::Canvas, dx)
   isdefined(c, :clim) || return
   clim = c.clim[]
   r = clim[2] - clim[1]
-  c.clim[] = clim .+ r*dx
+  c.clim[] = clim .- r*dx
 end
 
 function contrast!(c::Canvas, dx)
   isdefined(c, :clim) || return
   clim = c.clim[]
   r = clim[2] - clim[1]
-  clim = clim .+ [-r*dx, r*dx]
+  clim = clim .- [-r*dx, r*dx]
   clim[2] > clim[1] && (c.clim[] = (clim[1], clim[2]))
 end
 
@@ -150,12 +150,21 @@ function bindevents!(c::Canvas)
     ispressed(but, Keyboard.right) && pancanvas!(c, [c.ijrect[].width/8, 0.0])
     ispressed(but, Keyboard.up) && pancanvas!(c, [0.0, -c.ijrect[].height/8])
     ispressed(but, Keyboard.down) && pancanvas!(c, [0.0, c.ijrect[].width/8])
-    ispressed(but, Keyboard.left_bracket) && zoomcanvas!(c, [1/1.2, 1/1.2])
-    ispressed(but, Keyboard.right_bracket) && zoomcanvas!(c, [1.2, 1.2])
-    ispressed(but, Keyboard.equal) && brighten!(c, -0.1)
-    ispressed(but, Keyboard.minus) && brighten!(c, 0.1)
-    ispressed(but, Keyboard.period) && contrast!(c, -0.1)
-    ispressed(but, Keyboard.comma) && contrast!(c, 0.1)
+    if c.datasrc.xylock
+      ispressed(but, Keyboard.left_bracket) && zoomcanvas!(c, [1/1.2, 1/1.2])
+      ispressed(but, Keyboard.right_bracket) && zoomcanvas!(c, [1.2, 1.2])
+      ispressed(but, Keyboard.minus) && zoomcanvas!(c,[1/1.2, 1/1.2])
+      ispressed(but, Keyboard.equal) && zoomcanvas!(c, [1.2, 1.2])
+    else
+      ispressed(but, Keyboard.left_bracket) && zoomcanvas!(c, [1/1.2, 1.0])
+      ispressed(but, Keyboard.right_bracket) && zoomcanvas!(c, [1.2, 1.0])
+      ispressed(but, Keyboard.minus) && zoomcanvas!(c,[1.0, 1/1.2])
+      ispressed(but, Keyboard.equal) && zoomcanvas!(c, [1.0, 1.2])
+    end
+    ispressed(but, Keyboard.comma) && brighten!(c, -0.1)
+    ispressed(but, Keyboard.period) && brighten!(c, 0.1)
+    ispressed(but, Keyboard.semicolon) && contrast!(c, -0.1)
+    ispressed(but, Keyboard.apostrophe) && contrast!(c, 0.1)
     ispressed(but, Keyboard._0) && resetcanvas!(c)
   end
 end
@@ -334,7 +343,11 @@ function addcursor!(c::Canvas; position=nothing, color=:black, textsize=15.0, al
        c.ijhome[].bottom <= ij[2] < c.ijhome[].bottom + c.ijhome[].height
       x, y = ij2xy(ij[1], ij[2], c)
       if c isa HeatmapCanvas
-        s[] = @sprintf(" %.3f, %.3f, %.3f ", x, y, c.buf[][round(Int, ij[1])+1, round(Int, ij[2])+1])
+        try
+          s[] = @sprintf(" %.3f, %.3f, %.3f ", x, y, c.buf[][round(Int, ij[1])+1, round(Int, ij[2])+1])
+        catch
+          s[] = " "
+        end
       else
         s[] = @sprintf(" %.3f, %.3f ", x, y)
       end

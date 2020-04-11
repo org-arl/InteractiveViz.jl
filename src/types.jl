@@ -26,6 +26,7 @@ Base.@kwdef struct DataSource
   xzoom::Bool = true
   yzoom::Bool = true
   czoom::Bool = true
+  xylock::Bool = false
   minwidth::Float64 = 0
   maxwidth::Float64 = Inf64
   minheight::Float64 = 0
