@@ -40,7 +40,7 @@ function iplot(f::Function, x1=0.0, x2=1.0, y1=missing, y2=missing; axes=true, a
     data = data
   )
   ijrect = axes && !overlay ? inset(viz.ijrect, 100, 50, 100, 50) : viz.ijrect
-  c = addcanvas!(ScatterCanvas, viz, datasrc; rect=ijrect, kwargs...)
+  c = addcanvas!(LineCanvas, viz, datasrc; rect=ijrect, kwargs...)
   axes && addaxes!(c; color=axescolor, inset = overlay ? 100 : 0, border = overlay ? 0 : 150)
   cursor && addcursor!(c, color=axescolor)
   c
@@ -55,7 +55,7 @@ function iplot!(f::Function; data=missing, kwargs...)
     xyrect = prev.datasrc.xyrect,
     data = data
   )
-  c = addcanvas!(ScatterCanvas, viz, datasrc; rect=prev.ijrect, kwargs...)
+  c = addcanvas!(LineCanvas, viz, datasrc; rect=prev.ijrect, kwargs...)
   c.xyrect[] = prev.xyrect[]
   c
 end

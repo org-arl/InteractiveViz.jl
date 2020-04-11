@@ -61,5 +61,16 @@ Base.@kwdef struct ScatterCanvas <: Canvas
   task::Ref{Task}
 end
 
+Base.@kwdef struct LineCanvas <: Canvas
+  parent::Viz
+  ijhome::Node{ℛ{Int}}       # home location for canvas in pixels
+  ijrect::Node{ℛ{Int}}       # current location for canvas in pixels
+  xyrect::Node{ℛ{Float64}}   # canvas extents in data coordinates
+  buf::Node{Vector{Point2f0}}
+  datasrc::DataSource
+  dirty::Node{Bool}
+  task::Ref{Task}
+end
+
 Base.show(io::IO, x::Viz) = println(io, typeof(x))
 Base.show(io::IO, x::Canvas) = println(io, typeof(x))

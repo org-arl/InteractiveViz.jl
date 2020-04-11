@@ -207,6 +207,21 @@ function mkcanvas(::Type{ScatterCanvas}, viz, ijhome, datasrc, kwargs)
   canvas
 end
 
+function mkcanvas(::Type{LineCanvas}, viz, ijhome, datasrc, kwargs)
+  canvas = LineCanvas(
+    parent = viz,
+    ijhome = ijhome,
+    ijrect = Node(ijhome[]),
+    xyrect = Node(datasrc.xyrect),
+    buf = Node(Point2f0[(Inf32, Inf32)]),
+    datasrc = datasrc,
+    dirty = Node{Bool}(true),
+    task = Ref{Task}()
+  )
+  lines!(viz.scene, canvas.buf; show_axis=false, kwargs...)
+  canvas
+end
+
 function addcanvas!(ctype, viz::Viz, datasrc::DataSource; rect=nothing, kwargs...)
   if rect === nothing
     ijhome = lift(r -> r, viz.ijrect)

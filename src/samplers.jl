@@ -61,4 +61,5 @@ function subset!(buf::AbstractVector{Point2f0}, c::Canvas)
     end
   end
   p < length(buf) && splice!(buf, p+1:length(buf))
+  length(buf) < 1 && push!(buf, Point2f0(Inf32, Inf32))  # needed because Makie does not like 0-point lines
 end
