@@ -3,14 +3,14 @@ export HeatmapCanvas, ScatterCanvas, LineCanvas
 
 const curviz = Ref{Union{Viz,Nothing}}(nothing)
 
-function ifigure(; width=1024, height=768, hold=false)
+function ifigure(; width=1024, height=768, hold=false, show=true)
   hold && curviz[] !== nothing && return curviz[]
   curviz[] = Viz(
     scene = Scene(resolution=(width,height), camera=campixel!),
     ijrect = Node(ℛ(0, 0, width, height)),
     children = Canvas[]
   )
-  display(curviz[].scene)
+  show && display(curviz[].scene)
   on(curviz[].scene.events.window_area) do win
     curviz[].ijrect[] = ℛ(win.origin[1], win.origin[2], win.widths[1], win.widths[2])
   end
