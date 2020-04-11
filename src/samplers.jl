@@ -9,21 +9,6 @@ function apply!(f::Function, buf::AbstractMatrix, c::Canvas)
   end
 end
 
-function set!(buf, p, pt)
-  if p < length(buf)
-    p += 1
-    buf[p] = pt
-  else
-    push!(buf, pt)
-    p = length(buf)
-  end
-  p
-end
-
-function truncate!(buf, p)
-  p < length(buf) && splice!(buf, p+1:length(buf))
-end
-
 function apply!(f::Function, buf::AbstractVector{Point2f0}, c::Canvas)
   xyrect = c.xyrect[]
   n = c.ijhome[].width
@@ -41,6 +26,7 @@ function apply!(f::Function, buf::AbstractVector{Point2f0}, c::Canvas)
     end
   end
   truncate!(buf, p)
+  length(buf) < 1 && push!(buf, Point2f0(Inf32, Inf32))  # needed because Makie does not like 0-point lines
 end
 
 function subset!(buf::AbstractVector{Point2f0}, c::Canvas)
@@ -51,15 +37,26 @@ function subset!(buf::AbstractVector{Point2f0}, c::Canvas)
   for k in 1:size(data,1)
     if xyrect.left <= data[k,1] < xyrect.left + xyrect.width && xyrect.bottom <= data[k,2] < xyrect.bottom + xyrect.height
       ij = xy2ij(Point2f0(data[k,1], data[k,2]), c)
-      if p < length(buf)
-        p += 1
-        buf[p] = ij
-      else
-        push!(buf, ij)
-        p = length(buf)
-      end
+      p = set!(buf, p, ij)
     end
   end
-  p < length(buf) && splice!(buf, p+1:length(buf))
+  truncate!(buf, p)
   length(buf) < 1 && push!(buf, Point2f0(Inf32, Inf32))  # needed because Makie does not like 0-point lines
+end
+
+### helpers
+
+function set!(buf, p, pt)
+  if p < length(buf)
+    p += 1
+    buf[p] = pt
+  else
+    push!(buf, pt)
+    p = length(buf)
+  end
+  p
+end
+
+function truncate!(buf, p)
+  p < length(buf) && splice!(buf, p+1:length(buf))
 end

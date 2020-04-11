@@ -1,22 +1,5 @@
 export iplot, iplot!, iscatter, iscatter!, iheatmap
 
-function autorange(y)
-  y1 = minimum(y)
-  y2 = maximum(y)
-  yr = y2 - y1
-  if yr == 0
-    y1 -= 0.5
-    y2 += 0.5
-  else
-    y1 -= 0.1*yr
-    y2 += 0.1*yr
-  end
-  y1, y2
-end
-
-inset(r::ℛ, left, right, bottom, top) = ℛ(r.left + left, r.bottom + bottom, r.width - left - right, r.height - bottom - top)
-inset(r::Node{ℛ{T}}, left, right, bottom, top) where T = lift(r -> ℛ(r.left + left, r.bottom + bottom, r.width - left - right, r.height - bottom - top), r)
-
 function iplot(x::AbstractVector, y::AbstractVecOrMat)
   # TODO
 end
@@ -87,3 +70,22 @@ function iheatmap(f::Function, x1=0.0, x2=1.3, y1=0.0, y2=1.0; axes=true, axesco
   cursor && addcursor!(c, color=axescolor)
   c
 end
+
+### helpers
+
+function autorange(y)
+  y1 = minimum(y)
+  y2 = maximum(y)
+  yr = y2 - y1
+  if yr == 0
+    y1 -= 0.5
+    y2 += 0.5
+  else
+    y1 -= 0.1*yr
+    y2 += 0.1*yr
+  end
+  y1, y2
+end
+
+inset(r::ℛ, left, right, bottom, top) = ℛ(r.left + left, r.bottom + bottom, r.width - left - right, r.height - bottom - top)
+inset(r::Node{ℛ{T}}, left, right, bottom, top) where T = lift(r -> ℛ(r.left + left, r.bottom + bottom, r.width - left - right, r.height - bottom - top), r)
