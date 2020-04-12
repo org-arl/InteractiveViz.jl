@@ -6,6 +6,34 @@ struct ℛ{T}
   height::T
 end
 
+left(r::ℛ) = r.left
+right(r::ℛ{<:Int}) = r.left + r.width - 1
+right(r::ℛ{<:AbstractFloat}) = r.left + r.width
+width(r::ℛ) = r.width
+bottom(r::ℛ) = r.bottom
+top(r::ℛ{<:Int}) = r.bottom + r.height - 1
+top(r::ℛ{<:AbstractFloat}) = r.bottom + r.height
+height(r::ℛ) = r.height
+aspectratio(r::ℛ) = r.width / r.height
+
+left(r::Node) = left(r[])
+right(r::Node) = right(r[])
+width(r::Node) = width(r[])
+bottom(r::Node) = bottom(r[])
+top(r::Node) = top(r[])
+height(r::Node) = height(r[])
+aspectratio(r::Node) = aspectratio(r[])
+
+function ℛ(r::ℛ; left=missing, bottom=missing, width=missing, height=missing)
+  left === missing && (left = r.left)
+  bottom === missing && (bottom = r.bottom)
+  width === missing && (width = r.width)
+  height === missing && (height = r.height)
+  ℛ(left, bottom, width, height)
+end
+
+ℛ(r::Node; kwargs...) = ℛ(r[]; kwargs...)
+
 abstract type Canvas end
 
 Base.@kwdef struct DataSource

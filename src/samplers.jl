@@ -11,9 +11,9 @@ end
 
 function apply!(f::Function, buf::AbstractVector{Point2f0}, c::Canvas)
   xyrect = c.xyrect[]
-  n = c.ijhome[].width
+  n = width(c.ijhome)
   p = 0
-  for x ∈ range(xyrect.left, xyrect.left + xyrect.width; length=n+1)
+  for x ∈ range(left(xyrect), right(xyrect); length=n+1)
     y = f(x)
     if y isa AbstractVector
       for k ∈ 1:length(y)
@@ -35,7 +35,7 @@ function pointcrop!(buf::AbstractVector{Point2f0}, c::Canvas)
   xyrect = c.xyrect[]
   p = 0
   for k in 1:size(data,1)
-    if xyrect.left <= data[k,1] < xyrect.left + xyrect.width && xyrect.bottom <= data[k,2] < xyrect.bottom + xyrect.height
+    if left(xyrect) <= data[k,1] <= right(xyrect) && bottom(xyrect) <= data[k,2] <= top(xyrect)
       ij = xy2ij(Point2f0(data[k,1], data[k,2]), c)
       p = set!(buf, p, ij)
     end
@@ -51,17 +51,13 @@ function linecrop!(buf::AbstractVector{Point2f0}, c::Canvas)
   n = size(data,1)
   if n > 0
     xyrect = c.xyrect[]
-    left = xyrect.left
-    right = xyrect.left + xyrect.width
-    bottom = xyrect.bottom
-    top = xyrect.bottom + xyrect.height
     lastpt = data[1,:]
     for k in 1:n
       nextpt = data[k < n ? k + 1 : n, :]
-      lastpt[1] < left && data[k,1] < left && nextpt[1] < left && continue
-      lastpt[1] > right && data[k,1] > right && nextpt[1] > right && continue
-      lastpt[2] < bottom && data[k,2] < bottom && nextpt[2] < bottom && continue
-      lastpt[2] > top && data[k,2] > top && nextpt[2] > top && continue
+      lastpt[1] < left(xyrect) && data[k,1] < left(xyrect) && nextpt[1] < left(xyrect) && continue
+      lastpt[1] > right(xyrect) && data[k,1] > right(xyrect) && nextpt[1] > right(xyrect) && continue
+      lastpt[2] < bottom(xyrect) && data[k,2] < bottom(xyrect) && nextpt[2] < bottom(xyrect) && continue
+      lastpt[2] > top(xyrect) && data[k,2] > top(xyrect) && nextpt[2] > top(xyrect) && continue
       lastpt = data[k,:]
       ij = xy2ij(Point2f0(data[k,1], data[k,2]), c)
       p = set!(buf, p, ij)
@@ -71,7 +67,7 @@ function linecrop!(buf::AbstractVector{Point2f0}, c::Canvas)
   length(buf) < 1 && push!(buf, Point2f0(Inf32, Inf32))  # needed because Makie does not like 0-point lines
 end
 
-# TODO: check if avarage time of pooling is correct
+# TODO: check if average time of pooling is correct
 function linepool!(buf::AbstractVector{Point2f0}, c::Canvas; pooling=orderedextrema)
   data = c.datasrc.data
   data === missing && return
@@ -81,13 +77,13 @@ function linepool!(buf::AbstractVector{Point2f0}, c::Canvas; pooling=orderedextr
   dx = data[2,1] - x0
   x2ndx(x) = round(Int, (x - x0) / dx)
   xyrect = c.xyrect[]
-  n1 = x2ndx(xyrect.left)
+  n1 = x2ndx(left(xyrect))
   n1 < 1 && (n1 = 1)
-  n2 = x2ndx(xyrect.left + xyrect.width)
+  n2 = x2ndx(right(xyrect))
   n2 > n && (n2 = n)
   p = 0
   if n1 <= n && n2 >= 1
-    m = c.ijrect[].width
+    m = width(c.ijrect)
     b = fld(n2 - n1, m)
     if b <= 1
       for k ∈ n1:n2
@@ -120,16 +116,16 @@ function heatmappool!(buf::AbstractMatrix, c::Canvas; pooling=mean)
   ypd = (c.datasrc.ymax - c.datasrc.ymin) / ysize
   isize, jsize = size(buf)
   xyrect = c.xyrect[]
-  xpi = xyrect.width / isize
-  ypj = xyrect.height / jsize
+  xpi = width(xyrect) / isize
+  ypj = height(xyrect) / jsize
   dpi = round(Int, xpi / xpd)
   dpj = round(Int, ypj / ypd)
   dpi < 1 && (dpi = 1)
   dpj < 1 && (dpj = 1)
   for j ∈ 1:jsize
     for i ∈ 1:isize
-      x = round(Int, ((i-1)*xpi + xyrect.left - c.datasrc.xmin) / xpd)
-      y = round(Int, ((j-1)*ypj + xyrect.bottom - c.datasrc.ymin) / ypd)
+      x = round(Int, ((i-1)*xpi + left(xyrect) - c.datasrc.xmin) / xpd)
+      y = round(Int, ((j-1)*ypj + bottom(xyrect) - c.datasrc.ymin) / ypd)
       x1 = x - fld(dpi, 2)
       x2 = x + cld(dpi, 2)
       y1 = y - fld(dpj, 2)
