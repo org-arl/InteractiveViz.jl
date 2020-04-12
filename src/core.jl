@@ -320,6 +320,7 @@ function addaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false, bor
       (right(r), top(r))
     ], c.ijhome); show_axis=false, color=bordercolor)
   end
+  r = c.ijhome
   inset != 0 && (r = lift(r -> ℛ(
     left(r) + inset, bottom(r) + inset,
     width(r) - 2*inset - 1, height(r) - 2*inset - 1), c.ijhome))
@@ -330,13 +331,13 @@ function addaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false, bor
       (left(r), top(r)),
       (right(r), top(r)),
       (right(r), bottom(r))
-    ], c.ijhome); show_axis=false, color=color)
+    ], r); show_axis=false, color=color)
   else
     lines!(scene, lift(r -> Point2f0[
       (right(r), bottom(r)),
       (left(r), bottom(r)),
       (left(r), top(r))
-    ], c.ijhome); show_axis=false, color=color)
+    ], r); show_axis=false, color=color)
   end
   xticktext(i, c) = @sprintf(" %.3f ", ij2xy(i, 0, c)[1])
   if xticks > 0
@@ -344,15 +345,15 @@ function addaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false, bor
       Point2f0(left(r) + k * width(r) / xticks, bottom(r)) =>
       Point2f0(left(r) + k * width(r) / xticks, bottom(r) - ticksize)
       for k ∈ 0:xticks
-    ], c.ijhome); show_axis=false, color=color)
+    ], r); show_axis=false, color=color)
     grid && linesegments!(scene, lift(r -> [
       Point2f0(left(r) + k * width(r) / xticks, bottom(r)) =>
       Point2f0(left(r) + k * width(r) / xticks, top(r))
       for k ∈ 0:xticks
-    ], c.ijhome); show_axis=false, color=color, linestyle=:dot)
+    ], r); show_axis=false, color=color, linestyle=:dot)
     for k ∈ 0:xticks
-      text!(scene, lift((r, xy) -> xticktext(left(r) + k * width(r) / xticks, c), c.ijhome, c.xyrect);
-        position=lift(r -> (left(r) + k * width(r) / xticks, bottom(r) - ticksize - textsize/2), c.ijhome),
+      text!(scene, lift((r, xy) -> xticktext(left(r) + k * width(r) / xticks, c), r, c.xyrect);
+        position=lift(r -> (left(r) + k * width(r) / xticks, bottom(r) - ticksize - textsize/2), r),
         textsize=textsize, color=color,
         align=(:center, :center))
     end
@@ -363,15 +364,15 @@ function addaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false, bor
       Point2f0(left(r), bottom(r) + k * height(r) / yticks) =>
       Point2f0(left(r) - ticksize, bottom(r) + k * height(r) / yticks)
       for k ∈ 0:yticks
-    ], c.ijhome); show_axis=false, color=color)
+    ], r); show_axis=false, color=color)
     grid && linesegments!(scene, lift(r -> [
       Point2f0(left(r), bottom(r) + k * height(r) / yticks) =>
       Point2f0(right(r), bottom(r) + k * height(r) / yticks)
       for k ∈ 0:yticks
-    ], c.ijhome); show_axis=false, color=color, linestyle=:dot)
+    ], r); show_axis=false, color=color, linestyle=:dot)
     for k ∈ 0:yticks
-      text!(scene, lift((r, xy) -> yticktext(bottom(r) + k * height(r) / yticks, c), c.ijhome, c.xyrect);
-        position=lift(r -> (float(left(r) - ticksize), bottom(r) + k * height(r) / yticks), c.ijhome),
+      text!(scene, lift((r, xy) -> yticktext(bottom(r) + k * height(r) / yticks, c), r, c.xyrect);
+        position=lift(r -> (float(left(r) - ticksize), bottom(r) + k * height(r) / yticks), r),
         textsize=textsize, color=color,
         align=(:right, :center))
     end

@@ -3,7 +3,6 @@ export iplot, iplot!, iscatter, iscatter!, iheatmap
 const bgcolor = RGB(1,1,1)
 
 # TODO: add support for SignalBuf
-# TODO: provide access to pooling options
 
 iplot(y::AbstractVecOrMat, args...; kwargs...) = iplot(1:size(y,1), y, args...; kwargs...)
 iplot!(y::AbstractVecOrMat; kwargs...) = iplot!(1:size(y,1), y; kwargs...)
