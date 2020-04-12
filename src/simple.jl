@@ -58,7 +58,7 @@ function iplot!(x::AbstractVector, y::AbstractVector; kwargs...)
   length(viz.children) == 0 && error("No previous canvas available to plot over")
   prev = viz.children[end]
   datasrc = datasource(;
-    generate! = linecrop!,
+    generate! = x isa AbstractRange ? linepool! : linecrop!,
     xyrect = prev.datasrc.xyrect,
     xylock = prev.datasrc.xylock,
     data = hcat(x, y),
