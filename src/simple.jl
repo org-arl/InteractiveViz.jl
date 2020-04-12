@@ -3,6 +3,7 @@ export iplot, iplot!, iscatter, iscatter!, iheatmap
 const bgcolor = RGB(1,1,1)
 
 # TODO: add support for SignalBuf
+# TODO: provide access to different pooling and dataset options
 
 iplot(y::AbstractVecOrMat, args...; kwargs...) = iplot(1:size(y,1), y, args...; kwargs...)
 iplot!(y::AbstractVecOrMat; kwargs...) = iplot!(1:size(y,1), y; kwargs...)
@@ -156,8 +157,28 @@ function iscatter!(x::AbstractVector, y::AbstractVector; kwargs...)
   c
 end
 
-function iheatmap(z::AbstractMatrix)
-  # TODO: implement heatmaps
+# TODO: add controls on cmin, cmax defaults
+# TODO: fix cursor values -- they are offset
+# TODO: why are we getting NaNs for: randn(512,3600*44100÷512)
+function iheatmap(z::AbstractMatrix, x1=0.0, x2=1.0, y1=0.0, y2=1.0; xylock=false, axes=true, axescolor=:black, grid=false, overlay=false, cursor=false, kwargs...)
+  x2 <= x1 && error("Bad x range")
+  y2 <= y1 && error("Bad y range")
+  viz = ifigure()
+  datasrc = DataSource(
+    generate! = heatmappool!,
+    xyrect = ℛ{Float64}(x1, y1, x2-x1, y2-y1),
+    xylock = xylock,
+    data = z,
+    xmin = x1,
+    xmax = x2,
+    ymin = y1,
+    ymax = y2
+  )
+  ijrect = axes && !overlay ? inset(viz.ijrect, 100, 50, 100, 50) : viz.ijrect
+  c = addcanvas!(HeatmapCanvas, viz, datasrc; rect=ijrect, kwargs...)
+  axes && addaxes!(c; grid=grid, color=axescolor, inset = overlay ? 100 : 0, border = overlay ? 0 : 150)
+  cursor && addcursor!(c, color=axescolor)
+  c
 end
 
 function iheatmap(f::Function, x1=0.0, x2=1.3, y1=0.0, y2=1.0; xylock=true, axes=true, axescolor=:black, grid=false, overlay=false, cursor=false, data=missing, kwargs...)

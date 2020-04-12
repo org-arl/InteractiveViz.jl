@@ -3,6 +3,7 @@ module InteractiveViz
 using Makie
 using Printf
 using Colors
+using Statistics
 
 include("types.jl")
 include("core.jl")

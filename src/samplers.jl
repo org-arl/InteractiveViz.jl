@@ -1,4 +1,4 @@
-export apply!, pointcrop!, linecrop!, linepool!, aggregate!
+export apply!, pointcrop!, linecrop!, linepool!, heatmappool!, aggregate!
 
 function apply!(f::Function, buf::AbstractMatrix, c::Canvas)
   for j ∈ 1:size(buf,2)
@@ -71,7 +71,8 @@ function linecrop!(buf::AbstractVector{Point2f0}, c::Canvas)
   length(buf) < 1 && push!(buf, Point2f0(Inf32, Inf32))  # needed because Makie does not like 0-point lines
 end
 
-function linepool!(buf::AbstractVector{Point2f0}, c::Canvas)
+# TODO: check if avarage time of pooling is correct
+function linepool!(buf::AbstractVector{Point2f0}, c::Canvas; pooling=orderedextrema)
   data = c.datasrc.data
   data === missing && return
   n = size(data,1)
@@ -98,17 +99,53 @@ function linepool!(buf::AbstractVector{Point2f0}, c::Canvas)
         k2 = k + b - 1
         k2 > n && (k2 = n)
         blk = @view data[k:k2,2]
-        y1, y2 = orderedextrema(blk)
         x = (data[k,1] + data[k2,1]) / 2
-        ij = xy2ij(Point2f0(x, y1), c)
-        p = set!(buf, p, ij)
-        ij = xy2ij(Point2f0(x, y2), c)
-        p = set!(buf, p, ij)
+        for y ∈ pooling(blk)
+          ij = xy2ij(Point2f0(x, y), c)
+          p = set!(buf, p, ij)
+        end
       end
     end
   end
   truncate!(buf, p)
   length(buf) < 1 && push!(buf, Point2f0(Inf32, Inf32))  # needed because Makie does not like 0-point lines
+end
+
+# TODO: check if sizes need to be adjusted by 1 for pixels vs data coordinates
+function heatmappool!(buf::AbstractMatrix, c::Canvas; pooling=mean)
+  data = c.datasrc.data
+  data === missing && return
+  xsize, ysize = size(data)
+  xpd = (c.datasrc.xmax - c.datasrc.xmin) / xsize
+  ypd = (c.datasrc.ymax - c.datasrc.ymin) / ysize
+  isize, jsize = size(buf)
+  xyrect = c.xyrect[]
+  xpi = xyrect.width / isize
+  ypj = xyrect.height / jsize
+  dpi = round(Int, xpi / xpd)
+  dpj = round(Int, ypj / ypd)
+  dpi < 1 && (dpi = 1)
+  dpj < 1 && (dpj = 1)
+  for j ∈ 1:jsize
+    for i ∈ 1:isize
+      x = round(Int, ((i-1)*xpi + xyrect.left - c.datasrc.xmin) / xpd)
+      y = round(Int, ((j-1)*ypj + xyrect.bottom - c.datasrc.ymin) / ypd)
+      x1 = x - fld(dpi, 2)
+      x2 = x + cld(dpi, 2)
+      y1 = y - fld(dpj, 2)
+      y2 = y + cld(dpj, 2)
+      if x1 > xsize || x2 < 1 || y1 > ysize || y2 < 1
+        buf[i,j] = 0
+      else
+        x1 < 1 && (x1 = 1)
+        x2 > xsize && (x2 = xsize)
+        y1 < 1 && (y1 = 1)
+        y2 > xsize && (y2 = xsize)
+        blk = @view data[x1:x2,y1:y2]
+        buf[i,j] = pooling(blk)
+      end
+    end
+  end
 end
 
 function aggregate!(buf::AbstractMatrix, c::Canvas)
