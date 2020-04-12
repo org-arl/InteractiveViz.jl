@@ -107,7 +107,6 @@ function linepool!(buf::AbstractVector{Point2f0}, c::Canvas; pooling=orderedextr
   length(buf) < 1 && push!(buf, Point2f0(Inf32, Inf32))  # needed because Makie does not like 0-point lines
 end
 
-# TODO: check if sizes need to be adjusted by 1 for pixels vs data coordinates
 function heatmappool!(buf::AbstractMatrix, c::Canvas; pooling=mean)
   data = c.datasrc.data
   data === missing && return
@@ -143,6 +142,7 @@ function heatmappool!(buf::AbstractMatrix, c::Canvas; pooling=mean)
   end
 end
 
+# TODO: add support for spreading?
 function aggregate!(buf::AbstractMatrix, c::Canvas)
   m, n = size(buf)
   buf .= zero(buf[1,1])
@@ -151,7 +151,6 @@ function aggregate!(buf::AbstractMatrix, c::Canvas)
     i, j = xy2ij(Int, data[k,1], data[k,2], c)
     0 <= i < m && 0 <= j < n && (buf[i+1, j+1] += 1)
   end
-  # TODO: add support for spreading?
 end
 
 ### helpers

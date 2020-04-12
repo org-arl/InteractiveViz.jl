@@ -136,8 +136,10 @@ end
 
 function zoomcanvas!(c::Canvas, xyrect::ℛ)
   c.datasrc.xzoom || c.datasrc.yzoom || return
-  c.datasrc.xzoom || (xyrect = ℛ(xyrect; left=left(c.xyrect)))
-  c.datasrc.yzoom || (xyrect = ℛ(xyrect; bottom=bottom(c.xyrect)))
+  c.datasrc.xpan || (xyrect = ℛ(xyrect; left=left(c.xyrect)))
+  c.datasrc.ypan || (xyrect = ℛ(xyrect; bottom=bottom(c.xyrect)))
+  c.datasrc.xzoom || (xyrect = ℛ(xyrect; width=width(c.xyrect)))
+  c.datasrc.yzoom || (xyrect = ℛ(xyrect; height=height(c.xyrect)))
   if c.datasrc.xylock
     ratio = aspectratio(c.xyrect)
     if aspectratio(xyrect) > ratio
