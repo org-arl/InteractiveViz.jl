@@ -159,14 +159,17 @@ function iscatter!(x::AbstractVector, y::AbstractVector; kwargs...)
   c
 end
 
-function iheatmap(z::AbstractMatrix, x1=0.0, x2=1.0, y1=0.0, y2=1.0; axes=true, axescolor=:black, grid=false, overlay=false, cursor=false, kwargs...)
+# TODO: allow starting with a smaller view than the full z matrix
+function iheatmap(z::AbstractMatrix, x1=0.0, x2=1.0, y1=0.0, y2=1.0; clim=missing, pooling=mean, axes=true, axescolor=:black, grid=false, overlay=false, cursor=false, kwargs...)
   x2 <= x1 && error("Bad x range")
   y2 <= y1 && error("Bad y range")
+  clim === missing && (clim = extrema(z))
   viz = ifigure()
   datasrc = datasource(;
-    generate! = heatmappool!,
+    generate! = (b, c) -> heatmappool!(b, c; pooling=pooling),
     xyrect = ℛ{Float64}(x1, y1, x2-x1, y2-y1),
     data = z,
+    clim = clim,
     xmin = x1,
     xmax = x2,
     ymin = y1,
