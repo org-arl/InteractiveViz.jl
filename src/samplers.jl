@@ -111,33 +111,32 @@ end
 function heatmappool!(buf::AbstractMatrix, c::Canvas; pooling=mean)
   data = c.datasrc.data
   data === missing && return
-  xsize, ysize = size(data)
-  xpd = (c.datasrc.xmax - c.datasrc.xmin) / xsize
-  ypd = (c.datasrc.ymax - c.datasrc.ymin) / ysize
-  isize, jsize = size(buf)
+  pwidth, qwidth = size(data)
+  xylims = c.datasrc.xyrect
+  xpp = width(xylims) / pwidth
+  ypq = height(xylims) / qwidth
+  iwidth, jwidth = size(buf)
   xyrect = c.xyrect[]
-  xpi = width(xyrect) / isize
-  ypj = height(xyrect) / jsize
-  dpi = round(Int, xpi / xpd)
-  dpj = round(Int, ypj / ypd)
-  dpi < 1 && (dpi = 1)
-  dpj < 1 && (dpj = 1)
-  for j ∈ 1:jsize
-    for i ∈ 1:isize
-      x = round(Int, ((i-1)*xpi + left(xyrect) - c.datasrc.xmin) / xpd)
-      y = round(Int, ((j-1)*ypj + bottom(xyrect) - c.datasrc.ymin) / ypd)
-      x1 = x - fld(dpi, 2)
-      x2 = x + cld(dpi, 2)
-      y1 = y - fld(dpj, 2)
-      y2 = y + cld(dpj, 2)
-      if x1 > xsize || x2 < 1 || y1 > ysize || y2 < 1
+  xpi = width(xyrect) / iwidth
+  ypj = height(xyrect) / jwidth
+  ppi = xpi / xpp
+  qpj = ypj / ypq
+  for j ∈ 1:jwidth
+    for i ∈ 1:iwidth
+      p = ((i - 1) * xpi + left(xyrect) - left(xylims)) / xpp
+      q = ((j - 1) * ypj + bottom(xyrect) - bottom(xylims)) / ypq
+      p1 = round(Int, p - ppi/2) + 1
+      p2 = round(Int, p + ppi/2) + 1
+      q1 = round(Int, q - qpj/2) + 1
+      q2 = round(Int, q + qpj/2) + 1
+      if p1 > pwidth || p2 < 1 || q1 > qwidth || q2 < 1
         buf[i,j] = 0
       else
-        x1 < 1 && (x1 = 1)
-        x2 > xsize && (x2 = xsize)
-        y1 < 1 && (y1 = 1)
-        y2 > xsize && (y2 = xsize)
-        blk = @view data[x1:x2,y1:y2]
+        p1 < 1 && (p1 = 1)
+        p2 > pwidth && (p2 = pwidth)
+        q1 < 1 && (q1 = 1)
+        q2 > qwidth && (q2 = qwidth)
+        blk = @view data[p1:p2,q1:q2]
         buf[i,j] = pooling(blk)
       end
     end
