@@ -3,7 +3,7 @@ export iplot, iplot!, iscatter, iscatter!, iheatmap
 const bgcolor = RGB(1,1,1)
 
 # TODO: add support for SignalBuf
-# TODO: provide access to different pooling and dataset options
+# TODO: provide access to pooling options
 
 iplot(y::AbstractVecOrMat, args...; kwargs...) = iplot(1:size(y,1), y, args...; kwargs...)
 iplot!(y::AbstractVecOrMat; kwargs...) = iplot!(1:size(y,1), y; kwargs...)
@@ -23,7 +23,7 @@ function iplot!(x::AbstractVector, y::AbstractMatrix; kwargs...)
   end
 end
 
-function iplot(x::AbstractVector, y::AbstractVector, x1=missing, x2=missing, y1=missing, y2=missing; xylock=false, axes=true, axescolor=:black, grid=false, overlay=false, cursor=false, kwargs...)
+function iplot(x::AbstractVector, y::AbstractVector, x1=missing, x2=missing, y1=missing, y2=missing; axes=true, axescolor=:black, grid=false, overlay=false, cursor=false, kwargs...)
   length(x) != size(y,1) && error("x and y must be of equal length")
   if x1 === missing || x2 === missing
     x1a, x2a = autorange(x)
@@ -37,13 +37,13 @@ function iplot(x::AbstractVector, y::AbstractVector, x1=missing, x2=missing, y1=
   end
   x2 <= x1 && error("Bad x range")
   y2 <= y1 && error("Bad y range")
-  datasrc = DataSource(
+  datasrc = datasource(;
     generate! = x isa AbstractRange ? linepool! : linecrop!,
     xyrect = ℛ{Float64}(x1, y1, x2-x1, y2-y1),
-    xylock = xylock,
     xmin = minimum(x),
     xmax = maximum(x),
-    data = hcat(x, y)
+    data = hcat(x, y),
+    kwargs...
   )
   viz = ifigure()
   ijrect = axes && !overlay ? inset(viz.ijrect, 100, 50, 100, 50) : viz.ijrect
@@ -57,18 +57,19 @@ function iplot!(x::AbstractVector, y::AbstractVector; kwargs...)
   viz = ifigure(hold=true)
   length(viz.children) == 0 && error("No previous canvas available to plot over")
   prev = viz.children[end]
-  datasrc = DataSource(
+  datasrc = datasource(;
     generate! = linecrop!,
     xyrect = prev.datasrc.xyrect,
     xylock = prev.datasrc.xylock,
-    data = hcat(x, y)
+    data = hcat(x, y),
+    kwargs...
   )
   c = addcanvas!(LineCanvas, viz, datasrc; rect=prev.ijrect, kwargs...)
   c.xyrect[] = prev.xyrect[]
   c
 end
 
-function iplot(f::Function, x1=0.0, x2=1.0, y1=missing, y2=missing; xylock=false, axes=true, axescolor=:black, grid=false, overlay=false, cursor=false, data=missing, kwargs...)
+function iplot(f::Function, x1=0.0, x2=1.0, y1=missing, y2=missing; axes=true, axescolor=:black, grid=false, overlay=false, cursor=false, kwargs...)
   x2 <= x1 && error("Bad x range")
   if y1 === missing || y2 === missing
     y1a, y2a = autorange(f.(x1 .+ rand(1000)*(x2-x1)), 0.1)
@@ -76,11 +77,10 @@ function iplot(f::Function, x1=0.0, x2=1.0, y1=missing, y2=missing; xylock=false
     y2 === missing && (y2 = y2a)
   end
   y2 <= y1 && error("Bad y range")
-  datasrc = DataSource(
+  datasrc = datasource(
     generate! = (b, c) -> apply!(f, b, c),
     xyrect = ℛ{Float64}(x1, y1, x2-x1, y2-y1),
-    xylock = xylock,
-    data = data
+    kwargs...
   )
   viz = ifigure()
   ijrect = axes && !overlay ? inset(viz.ijrect, 100, 50, 100, 50) : viz.ijrect
@@ -90,15 +90,15 @@ function iplot(f::Function, x1=0.0, x2=1.0, y1=missing, y2=missing; xylock=false
   c
 end
 
-function iplot!(f::Function; data=missing, kwargs...)
+function iplot!(f::Function; kwargs...)
   viz = ifigure(hold=true)
   length(viz.children) == 0 && error("No previous canvas available to plot over")
   prev = viz.children[end]
-  datasrc = DataSource(
+  datasrc = datasource(;
     generate! = (b, c) -> apply!(f, b, c),
     xyrect = prev.datasrc.xyrect,
     xylock = prev.datasrc.xylock,
-    data = data
+    kwargs...
   )
   c = addcanvas!(LineCanvas, viz, datasrc; rect=prev.ijrect, kwargs...)
   c.xyrect[] = prev.xyrect[]
@@ -119,7 +119,7 @@ function iscatter(x::AbstractVector, y::AbstractVector, x1=missing, x2=missing, 
   end
   x2 <= x1 && error("Bad x range")
   y2 <= y1 && error("Bad y range")
-  datasrc = DataSource(
+  datasrc = datasource(;
     generate! = aggregate ? aggregate! : pointcrop!,
     xyrect = ℛ{Float64}(x1, y1, x2-x1, y2-y1),
     xylock = xylock,
@@ -127,7 +127,8 @@ function iscatter(x::AbstractVector, y::AbstractVector, x1=missing, x2=missing, 
     xmax = maximum(x),
     ymin = minimum(y),
     ymax = maximum(y),
-    data = hcat(x, y)
+    data = hcat(x, y),
+    kwargs...
   )
   viz = ifigure()
   ijrect = axes && !overlay ? inset(viz.ijrect, 100, 50, 100, 50) : viz.ijrect
@@ -146,33 +147,31 @@ function iscatter!(x::AbstractVector, y::AbstractVector; kwargs...)
   viz = ifigure(hold=true)
   length(viz.children) == 0 && error("No previous canvas available to plot over")
   prev = viz.children[end]
-  datasrc = DataSource(
+  datasrc = datasource(;
     generate! = pointcrop!,
     xyrect = prev.datasrc.xyrect,
     xylock = prev.datasrc.xylock,
-    data = hcat(x, y)
+    data = hcat(x, y),
+    kwargs...
   )
   c = addcanvas!(ScatterCanvas, viz, datasrc; rect=prev.ijrect, kwargs...)
   c.xyrect[] = prev.xyrect[]
   c
 end
 
-# TODO: add controls on cmin, cmax defaults
-# TODO: fix cursor values -- they are offset
-# TODO: why are we getting NaNs for: randn(512,3600*44100÷512)
-function iheatmap(z::AbstractMatrix, x1=0.0, x2=1.0, y1=0.0, y2=1.0; xylock=false, axes=true, axescolor=:black, grid=false, overlay=false, cursor=false, kwargs...)
+function iheatmap(z::AbstractMatrix, x1=0.0, x2=1.0, y1=0.0, y2=1.0; axes=true, axescolor=:black, grid=false, overlay=false, cursor=false, kwargs...)
   x2 <= x1 && error("Bad x range")
   y2 <= y1 && error("Bad y range")
   viz = ifigure()
-  datasrc = DataSource(
+  datasrc = datasource(;
     generate! = heatmappool!,
     xyrect = ℛ{Float64}(x1, y1, x2-x1, y2-y1),
-    xylock = xylock,
     data = z,
     xmin = x1,
     xmax = x2,
     ymin = y1,
-    ymax = y2
+    ymax = y2,
+    kwargs...
   )
   ijrect = axes && !overlay ? inset(viz.ijrect, 100, 50, 100, 50) : viz.ijrect
   c = addcanvas!(HeatmapCanvas, viz, datasrc; rect=ijrect, kwargs...)
@@ -181,15 +180,15 @@ function iheatmap(z::AbstractMatrix, x1=0.0, x2=1.0, y1=0.0, y2=1.0; xylock=fals
   c
 end
 
-function iheatmap(f::Function, x1=0.0, x2=1.3, y1=0.0, y2=1.0; xylock=true, axes=true, axescolor=:black, grid=false, overlay=false, cursor=false, data=missing, kwargs...)
+function iheatmap(f::Function, x1=0.0, x2=1.3, y1=0.0, y2=1.0; xylock=true, axes=true, axescolor=:black, grid=false, overlay=false, cursor=false, kwargs...)
   x2 <= x1 && error("Bad x range")
   y2 <= y1 && error("Bad y range")
   viz = ifigure()
-  datasrc = DataSource(
+  datasrc = datasource(;
     generate! = (b, c) -> apply!(f, b, c),
     xyrect = ℛ{Float64}(x1, y1, x2-x1, y2-y1),
     xylock = xylock,
-    data = data
+    kwargs...
   )
   ijrect = axes && !overlay ? inset(viz.ijrect, 100, 50, 100, 50) : viz.ijrect
   c = addcanvas!(HeatmapCanvas, viz, datasrc; rect=ijrect, kwargs...)
@@ -216,3 +215,11 @@ end
 
 inset(r::ℛ, li, ri, bi, ti) = ℛ(left(r) + li, bottom(r) + bi, width(r) - li - ri, height(r) - bi - ti)
 inset(r::Node{ℛ{T}}, li, ri, bi, ti) where T = lift(r -> ℛ(left(r) + li, bottom(r) + bi, width(r) - li - ri, height(r) - bi - ti), r)
+
+function datasource(; kwargs...)
+  dargs = Dict()
+  for k ∈ fieldnames(DataSource)
+    k ∈ keys(kwargs) && (dargs[k] = kwargs[k])
+  end
+  DataSource(; dargs...)
+end
