@@ -22,7 +22,7 @@ This package is still in beta, and not yet registered with the Julia package reg
 
 ```julia
 julia>]
-pkg> add InteractiveViz
+pkg> add https://github.com/org-arl/InteractiveViz.jl
 ```
 
 ### Dependencies
