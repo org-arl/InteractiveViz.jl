@@ -86,9 +86,14 @@ The "!" version of the plotting functions overlay the new plot on the previous p
 
 ![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot4.png)
 
+You can add axes labels with keyword options `xlabel` and `ylabel`:
+```julia
+julia> iplot(sin, 0, 100; xlabel="time (samples)", ylabel="voltage");
+```
+
 While we haven't documented all the keyword options here, you'll find that most of the [plot attributes for Makie](http://makie.juliaplots.org/stable/plot-attributes.html) work as options in _InteractiveViz_.
 
-While _InteractiveViz_ has much more to offer (multiple plots, linked axes, pan/zoom restrictions, etc) than the above use cases, the API is still evolving, and not yet documented. Other features such as axes labels, colorbars and legends are work-in-progress and should be ready soon.
+While _InteractiveViz_ has much more to offer (multiple plots, linked axes, pan/zoom restrictions, etc) than the above use cases, the API is still evolving, and not yet documented. Other features such as colorbars and legends are work-in-progress and should be ready soon.
 
 ### Interactivity
 

@@ -252,6 +252,10 @@ function mkcanvas(::Type{ScatterCanvas}, viz, ijhome, datasrc, kwargs)
   else
     scatter!(viz.scene, canvas.buf; show_axis=false, markersize=1, kwargs...)
   end
+  on(ijhome) do r
+    canvas.ijrect[] = r
+    updatecanvas!(canvas)
+  end
   canvas
 end
 
@@ -267,6 +271,10 @@ function mkcanvas(::Type{LineCanvas}, viz, ijhome, datasrc, kwargs)
     task = Ref{Task}()
   )
   lines!(viz.scene, canvas.buf; show_axis=false, kwargs...)
+  on(ijhome) do r
+    canvas.ijrect[] = r
+    updatecanvas!(canvas)
+  end
   canvas
 end
 
@@ -375,8 +383,13 @@ function addaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false, bor
         align=(:right, :center))
     end
   end
-  xlabel === missing || text!(scene, xlabel; position=(left(r) + width(r)/2, bottom(r) - 3*ticksize - textsize), textsize=textsize, color=color, align=(:center, :bottom))
-  ylabel === missing || text!(scene, ylabel; position=(left(r) - 3*ticksize - 4*textsize, bottom(r) + height(r)/2), textsize=textsize, color=color, align=(:center, :top), rotation=π/2)
+  # TODO: remove hardcoded 50 and 75
+  xlabel === missing || text!(scene, xlabel; position=lift(r ->
+    (left(r) + width(r)/2 - 50, bottom(r) - 4*ticksize - textsize), r),
+    textsize=textsize, color=color, align=(:center, :bottom))
+  ylabel === missing || text!(scene, ylabel; position=(r ->
+    (left(r) - 75, bottom(r) + height(r)/2), r),
+    textsize=textsize, color=color, align=(:center, :top), rotation=π/2)
   nothing
 end
 
