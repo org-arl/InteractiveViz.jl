@@ -287,12 +287,10 @@ function addcanvas!(ctype, viz::Viz, datasrc::DataSource; rect=nothing, kwargs..
   canvas
 end
 
-# TODO: add support for xlabel, ylabel, title
 # TODO: add support for legend
 # TODO: add support for colorbar
-# TODO: improve tick formatting
 
-function addaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false, border=0, bordercolor=:white, xticks=5, yticks=5, ticksize=10, textsize=15.0)
+function addaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false, border=0, bordercolor=:white, xlabel=missing, ylabel=missing, xticks=5, yticks=5, ticksize=10, textsize=15.0)
   scene = c.parent.scene
   if border > 0
     poly!(scene, lift(r -> Point2f0[
@@ -339,7 +337,7 @@ function addaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false, bor
       (left(r), top(r))
     ], r); show_axis=false, color=color)
   end
-  xticktext(i, c) = @sprintf(" %.3f ", ij2xy(i, 0, c)[1])
+  xticktext(i, c) = formatnums(ij2xy(i, 0, c)[1])
   if xticks > 0
     linesegments!(scene, lift(r -> [
       Point2f0(left(r) + k * width(r) / xticks, bottom(r)) =>
@@ -358,7 +356,7 @@ function addaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false, bor
         align=(:center, :center))
     end
   end
-  yticktext(j, c) = @sprintf(" %.3f ", ij2xy(0, j, c)[2])
+  yticktext(j, c) = formatnums(ij2xy(0, j, c)[2])
   if yticks > 0
     linesegments!(scene, lift(r -> [
       Point2f0(left(r), bottom(r) + k * height(r) / yticks) =>
@@ -377,6 +375,8 @@ function addaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false, bor
         align=(:right, :center))
     end
   end
+  xlabel === missing || text!(scene, xlabel; position=(left(r) + width(r)/2, bottom(r) - 3*ticksize - textsize), textsize=textsize, color=color, align=(:center, :bottom))
+  ylabel === missing || text!(scene, ylabel; position=(left(r) - 3*ticksize - 4*textsize, bottom(r) + height(r)/2), textsize=textsize, color=color, align=(:center, :top), rotation=π/2)
   nothing
 end
 
@@ -392,14 +392,12 @@ function addcursor!(c::Canvas; position=nothing, color=:black, textsize=15.0, al
       x, y = ij2xy(ij[1], ij[2], c)
       if c isa HeatmapCanvas
         try
-          s[] = @sprintf(" %.3f, %.3f, %.3f ", x, y,
-            c.buf[][round(Int, ij[1] - left(c.ijhome)) + 1,
-            round(Int, ij[2] - bottom(c.ijhome)) + 1])
+          s[] = formatnums(x, y, c.buf[][round(Int, ij[1] - left(c.ijhome)) + 1, round(Int, ij[2] - bottom(c.ijhome)) + 1])
         catch
           s[] = " "
         end
       else
-        s[] = @sprintf(" %.3f, %.3f ", x, y)
+        s[] = formatnums(x, y)
       end
     else
       s[] = " "
@@ -409,4 +407,23 @@ function addcursor!(c::Canvas; position=nothing, color=:black, textsize=15.0, al
     b || (s[] = " ")
   end
   nothing
+end
+
+function formatnums(x...)
+  s = ""
+  for x1 ∈ x
+    length(s) > 0 && (s *= ", ")
+    s *= formatnum(x1)
+  end
+  " " * s * " "
+end
+
+function formatnum(x)
+  x == 0 && return "0"
+  abs(x) > 10000 && return @sprintf("%.0e", x)
+  abs(x) >= 100 && return @sprintf("%.0f", x)
+  abs(x) >= 10 && return @sprintf("%.1f", x)
+  abs(x) >= 1 && return @sprintf("%.2f", x)
+  abs(x) < 0.001 && return @sprintf("%.0e", x)
+  @sprintf("%.3f", x)
 end
