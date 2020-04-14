@@ -387,9 +387,9 @@ function addaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false, bor
   xlabel === missing || text!(scene, xlabel; position=lift(r ->
     (left(r) + width(r)/2 - 50, bottom(r) - 4*ticksize - textsize), r),
     textsize=textsize, color=color, align=(:center, :bottom))
-  ylabel === missing || text!(scene, ylabel; position=(r ->
-    (left(r) - 75, bottom(r) + height(r)/2), r),
-    textsize=textsize, color=color, align=(:center, :top), rotation=π/2)
+  ylabel === missing || text!(scene, ylabel; position=lift(r ->
+      (left(r) - 75, bottom(r) + height(r)÷2), r),
+      textsize=textsize, color=color, align=(:center, :top), rotation=π/2)
   nothing
 end
 
