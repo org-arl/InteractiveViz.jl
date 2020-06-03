@@ -3,6 +3,22 @@ export HeatmapCanvas, ScatterCanvas, LineCanvas
 
 const curviz = Ref{Union{Viz,Nothing}}(nothing)
 
+const keymap = Dict(
+  :pan_left => Keyboard.left,
+  :pan_right => Keyboard.right,
+  :pan_up => Keyboard.up,
+  :pan_down => Keyboard.down,
+  :zoom_x_out => Keyboard.left_bracket,
+  :zoom_x_in => Keyboard.right_bracket,
+  :zoom_y_out => Keyboard.minus,
+  :zoom_y_in => Keyboard.equal,
+  :brightness_down => Keyboard.comma,
+  :brightness_up => Keyboard.period,
+  :contrast_up => Keyboard.semicolon,
+  :contrast_down => Keyboard.apostrophe,
+  :reset => Keyboard._0
+)
+
 function ifigure(; width=1024, height=768, hold=false, show=true)
   hold && curviz[] !== nothing && return curviz[]
   curviz[] = Viz(
@@ -178,26 +194,26 @@ function bindevents!(c::Canvas)
     pancanvas!(c, dx)
   end
   on(c.parent.scene.events.keyboardbuttons) do but
-    ispressed(but, Keyboard.left) && pancanvas!(c, [-width(c.ijrect)/8, 0.0])
-    ispressed(but, Keyboard.right) && pancanvas!(c, [width(c.ijrect)/8, 0.0])
-    ispressed(but, Keyboard.up) && pancanvas!(c, [0.0, -height(c.ijrect)/8])
-    ispressed(but, Keyboard.down) && pancanvas!(c, [0.0, height(c.ijrect)/8])
+    ispressed(but, keymap[:pan_left]) && pancanvas!(c, [-width(c.ijrect)/8, 0.0])
+    ispressed(but, keymap[:pan_right]) && pancanvas!(c, [width(c.ijrect)/8, 0.0])
+    ispressed(but, keymap[:pan_up]) && pancanvas!(c, [0.0, -height(c.ijrect)/8])
+    ispressed(but, keymap[:pan_down]) && pancanvas!(c, [0.0, height(c.ijrect)/8])
     if c.datasrc.xylock
-      ispressed(but, Keyboard.left_bracket) && zoomcanvas!(c, [1/1.2, 1/1.2])
-      ispressed(but, Keyboard.right_bracket) && zoomcanvas!(c, [1.2, 1.2])
-      ispressed(but, Keyboard.minus) && zoomcanvas!(c,[1/1.2, 1/1.2])
-      ispressed(but, Keyboard.equal) && zoomcanvas!(c, [1.2, 1.2])
+      ispressed(but, keymap[:zoom_x_out]) && zoomcanvas!(c, [1/1.2, 1/1.2])
+      ispressed(but, keymap[:zoom_x_in]) && zoomcanvas!(c, [1.2, 1.2])
+      ispressed(but, keymap[:zoom_y_out]) && zoomcanvas!(c,[1/1.2, 1/1.2])
+      ispressed(but, keymap[:zoom_y_in]) && zoomcanvas!(c, [1.2, 1.2])
     else
-      ispressed(but, Keyboard.left_bracket) && zoomcanvas!(c, [1/1.2, 1.0])
-      ispressed(but, Keyboard.right_bracket) && zoomcanvas!(c, [1.2, 1.0])
-      ispressed(but, Keyboard.minus) && zoomcanvas!(c,[1.0, 1/1.2])
-      ispressed(but, Keyboard.equal) && zoomcanvas!(c, [1.0, 1.2])
+      ispressed(but, keymap[:zoom_x_out]) && zoomcanvas!(c, [1/1.2, 1.0])
+      ispressed(but, keymap[:zoom_x_in]) && zoomcanvas!(c, [1.2, 1.0])
+      ispressed(but, keymap[:zoom_y_out]) && zoomcanvas!(c,[1.0, 1/1.2])
+      ispressed(but, keymap[:zoom_y_in]) && zoomcanvas!(c, [1.0, 1.2])
     end
-    ispressed(but, Keyboard.comma) && brighten!(c, -0.1)
-    ispressed(but, Keyboard.period) && brighten!(c, 0.1)
-    ispressed(but, Keyboard.semicolon) && contrast!(c, -0.1)
-    ispressed(but, Keyboard.apostrophe) && contrast!(c, 0.1)
-    ispressed(but, Keyboard._0) && resetcanvas!(c)
+    ispressed(but, keymap[:brightness_down]) && brighten!(c, -0.1)
+    ispressed(but, keymap[:brightness_up]) && brighten!(c, 0.1)
+    ispressed(but, keymap[:contrast_down]) && contrast!(c, -0.1)
+    ispressed(but, keymap[:contrast_up]) && contrast!(c, 0.1)
+    ispressed(but, keymap[:reset]) && resetcanvas!(c)
   end
   on(c.parent.selrect) do r
     margin = 100
