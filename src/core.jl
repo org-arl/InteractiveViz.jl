@@ -193,6 +193,9 @@ function bindevents!(c::Canvas)
   on(c.parent.scene.events.scroll) do dx
     pancanvas!(c, dx)
   end
+  on(c.parent.scene.events.mousebuttons) do but
+    ispressed(but, Mouse.right) && resetcanvas!(c)
+  end
   on(c.parent.scene.events.keyboardbuttons) do but
     ispressed(but, keymap[:pan_left]) && pancanvas!(c, [-width(c.ijrect)/8, 0.0])
     ispressed(but, keymap[:pan_right]) && pancanvas!(c, [width(c.ijrect)/8, 0.0])
