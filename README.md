@@ -5,7 +5,7 @@ Interactive visualization tools for Julia
 
 Julia already has a rich set of plotting tools in the form of the [Plots](https://github.com/JuliaPlots/Plots.jl) and [Makie](https://github.com/JuliaPlots/Makie.jl) ecosystems, and various backends for these. So why another plotting package?
 
-_InteractiveViz_ is **not** a replacement for _Plots_ or _Makie_, but rather an graphics pipeline system developed on top of `Makie`. It has a few objectives:
+_InteractiveViz_ is **not** a replacement for _Plots_ or _Makie_, but rather a graphics pipeline system developed on top of `Makie`. It has a few objectives:
 
 - To provide a simple API to visualize large datasets (tens of millions of data points) easily.
 - To enable interactivity, and be responsive even with large amounts of data.
@@ -18,11 +18,9 @@ This package does not aim to provide comprehensive production quality plotting. 
 
 ### Installation
 
-This package is still in beta, and not yet registered with the Julia package registry. You can install it directly from the Github URL:
-
 ```julia
 julia>]
-pkg> add https://github.com/org-arl/InteractiveViz.jl
+pkg> add InteractiveViz
 ```
 
 ### Dependencies
@@ -82,7 +80,7 @@ The `aggregate=true` option uses the graphics pipeline to reduce the data to scr
 ```julia
 julia> iscatter!(randn(10000) .- 1, randn(10000) .- 1; color=:blue);
 ```
-The "!" version of the plotting functions overlay the new plot on the previous plot, keeping the same _x_ and _y_ scales as far as possible.
+The "!" versions of the plotting functions overlay the new plot on the previous plot, keeping the same _x_ and _y_ scales as far as possible.
 
 ![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot4.png)
 
@@ -107,6 +105,8 @@ Mouse or touchpad may be used for panning (scroll gestures) and zooming (select 
 arrow keys   pan left/right/up/down
 0            reset zoom, pan, and color axis
 ```
+
+The keymap can be modified if desired (see [discussion](https://github.com/org-arl/InteractiveViz.jl/issues/1) for details).
 
 To enable data cursor (to get _x_, _y_ and _value_ (heatmaps) using mouse pointer), simply add `cursor=true` keyword argument to any of the plots.
 
