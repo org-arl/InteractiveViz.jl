@@ -95,7 +95,7 @@ While _InteractiveViz_ has much more to offer (multiple plots, linked axes, pan/
 
 ### Interactivity
 
-Mouse or touchpad may be used for panning (scroll gestures) and zooming (select area to zoom). All interactions are also supported with keyboard bindings:
+Mouse or touchpad may be used for panning (scroll gestures) and zooming (select area to zoom, right click to reset zoom). All interactions are also supported with keyboard bindings:
 
 ```
 -/+          y-axis zoom out/in
