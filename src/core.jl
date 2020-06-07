@@ -364,44 +364,131 @@ function addaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false, bor
       (left(r), top(r))
     ], r); show_axis=false, color=color)
   end
-  xticktext(i, c) = formatnums(ij2xy(i, 0, c)[1])
+
+  lims = c.xyrect
+
   if xticks > 0
-    linesegments!(scene, lift(r -> [
-      Point2f0(left(r) + k * width(r) / xticks, bottom(r)) =>
-      Point2f0(left(r) + k * width(r) / xticks, bottom(r) - ticksize)
-      for k ∈ 0:xticks
-    ], r); show_axis=false, color=color)
-    grid && linesegments!(scene, lift(r -> [
-      Point2f0(left(r) + k * width(r) / xticks, bottom(r)) =>
-      Point2f0(left(r) + k * width(r) / xticks, top(r))
-      for k ∈ 0:xticks
-    ], r); show_axis=false, color=color, linestyle=:dot)
-    for k ∈ 0:xticks
-      text!(scene, lift((r, xy) -> xticktext(left(r) + k * width(r) / xticks, c), r, c.xyrect);
-        position=lift(r -> (left(r) + k * width(r) / xticks, bottom(r) - ticksize - textsize/2), r),
-        textsize=textsize, color=color,
-        align=(:center, :center))
+    # 999 is a sentinel value, since Inf is Float64
+    xticks_min, xticks_max = clamp.((xticks - 2, xticks + 2), 1, 999)
+    # First, we optimize in dataspace
+    tick_locations_xy = lift(lims) do lims
+      return first(
+          PlotUtils.optimize_ticks(
+          left(lims),         # minimum of x in dataspace
+          right(lims);        # maximum of x in dataspace
+          k_min = xticks_min, # lower bound of number of ticks
+          k_ideal = xticks,   # ideal number of ticks, user provided
+          k_max = xticks_max  # upper bound of number of ticks
+        )
+      )
     end
+    # then, we switch to screen space for the (i, j) space ticks
+    # which are actually drawn
+    tick_locations_ij = @lift first.(xy2ij.($tick_locations_xy, 0, Ref(c)))
+
+    # draw tick marks
+    tickmark_linesegs = lift(tick_locations_ij, r) do locs, r
+      [
+        Point2f0(loc, bottom(r)) =>
+        Point2f0(loc, bottom(r) - ticksize)
+        for loc ∈ locs
+      ]
+    end
+    linesegments!(scene, tickmark_linesegs; show_axis=false, color=color)
+    # draw grid
+    if grid
+      grid_linesegs = lift(tick_locations_ij, r) do locs, r
+        [
+          Point2f0(loc, bottom(r)) =>
+          Point2f0(loc, top(r))
+          for loc ∈ locs
+        ]
+      end
+      linesegments!(scene, grid_linesegs; show_axis=false, color=color, linestyle=:dot)
+    end
+    # ticklabel + position string
+    ticklabels_positions = lift(tick_locations_xy, r) do locs, r
+      return Tuple{String, Point2f0}[
+        (
+          formatnum(loc),
+          Point2f0(
+            xy2ij(loc, 0, c)[1],
+            bottom(r) - ticksize - textsize/2
+          )
+        )
+        for loc in locs
+      ]
+    end
+    annotations!(
+      scene,
+      ticklabels_positions;
+      textsize = textsize,
+      color = color,
+      align = (:center, :center)
+    )
   end
-  yticktext(j, c) = formatnums(ij2xy(0, j, c)[2])
+
   if yticks > 0
-    linesegments!(scene, lift(r -> [
-      Point2f0(left(r), bottom(r) + k * height(r) / yticks) =>
-      Point2f0(left(r) - ticksize, bottom(r) + k * height(r) / yticks)
-      for k ∈ 0:yticks
-    ], r); show_axis=false, color=color)
-    grid && linesegments!(scene, lift(r -> [
-      Point2f0(left(r), bottom(r) + k * height(r) / yticks) =>
-      Point2f0(right(r), bottom(r) + k * height(r) / yticks)
-      for k ∈ 0:yticks
-    ], r); show_axis=false, color=color, linestyle=:dot)
-    for k ∈ 0:yticks
-      text!(scene, lift((r, xy) -> yticktext(bottom(r) + k * height(r) / yticks, c), r, c.xyrect);
-        position=lift(r -> (float(left(r) - ticksize), bottom(r) + k * height(r) / yticks), r),
-        textsize=textsize, color=color,
-        align=(:right, :center))
+    # 999 is a sentinel value, since Inf is Float64
+    yticks_min, yticks_max = clamp.((yticks - 2, yticks + 2), 1, 999)
+    # First, we optimize in dataspace
+    tick_locations_xy = lift(lims) do lims
+      return first(
+          PlotUtils.optimize_ticks(
+          bottom(lims),       # minimum of y in dataspace
+          top(lims);          # maximum of y in dataspace
+          k_min = yticks_min, # lower bound of number of ticks
+          k_ideal = yticks,   # ideal number of ticks, user provided
+          k_max = yticks_max  # upper bound of number of ticks
+        )
+      )
     end
+    # then, we switch to screen space for the (i, j) space ticks
+    # which are actually drawn
+    tick_locations_ij = @lift last.(xy2ij.($tick_locations_xy, 0, Ref(c)))
+
+    # draw tick marks
+    tickmark_linesegs = lift(tick_locations_ij, r) do locs, r
+      [
+        Point2f0(left(r), loc) =>
+        Point2f0(left(r) - ticksize, loc)
+        for loc ∈ locs
+      ]
+    end
+    linesegments!(scene, tickmark_linesegs; show_axis=false, color=color)
+    # draw grid
+    if grid
+      grid_linesegs = lift(tick_locations_ij, r) do locs, r
+        [
+          Point2f0(left(r),  loc) =>
+          Point2f0(right(r), loc)
+          for loc ∈ locs
+        ]
+      end
+      linesegments!(scene, grid_linesegs; show_axis=false, color=color, linestyle=:dot)
+    end
+    # ticklabel + position string
+    ticklabels_positions = lift(tick_locations_xy, r) do locs, r
+      return Tuple{String, Point2f0}[
+        (
+          formatnum(loc),
+          Point2f0(
+            float(left(r) - ticksize),
+            xy2ij(0, loc, c)[2]
+          )
+        )
+        for loc in locs
+      ]
+    end
+    annotations!(
+      scene,
+      ticklabels_positions;
+      textsize = textsize,
+      color = color,
+      align = (:right, :center)
+    )
   end
+
   # TODO: remove hardcoded 50 and 75
   xlabel === missing || text!(scene, xlabel; position=lift(r ->
     (left(r) + width(r)/2 - 50, bottom(r) - 4*ticksize - textsize), r),
