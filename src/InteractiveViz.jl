@@ -1,6 +1,7 @@
 module InteractiveViz
 
 using Makie
+using Makie.AbstractPlotting: PlotUtils
 using Printf
 using Colors
 using Statistics
