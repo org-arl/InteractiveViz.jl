@@ -5,9 +5,9 @@ const bgcolor = RGB(1,1,1)
 iplot(y::AbstractVecOrMat, args...; kwargs...) = iplot(1:size(y,1), y, args...; kwargs...)
 iplot!(y::AbstractVecOrMat; kwargs...) = iplot!(1:size(y,1), y; kwargs...)
 
-function iplot(x::AbstractVector, y::AbstractMatrix, args...; kwargs...)
+function iplot(x::AbstractVector, y::AbstractMatrix, args...; axes=true, xlabel=missing, ylabel=missing, axescolor=:black, grid=false, overlay=false, cursor=false, kwargs...)
   colors = distinguishable_colors(size(y,2)+1, [bgcolor])
-  iplot(x, y[:,1], args...; color=colors[2], kwargs...)
+  iplot(x, y[:,1], args...; color=colors[2], axes=axes, xlabel=xlabel, ylabel=ylabel, axescolor=axescolor, grid=grid, overlay=overlay, cursor=cursor, kwargs...)
   for k ∈ 2:size(y,2)
     iplot!(x, y[:,k]; color=colors[1+k], kwargs...)
   end
