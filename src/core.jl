@@ -105,21 +105,23 @@ function updatecanvas!(c::Canvas; invalidate=true, delay=0.1, first=false)
   invalidate && (c.dirty[] = true)
   isopen(c.parent.scene) || return
   c.dirty[] || return
-  first || c.task[].state === :done || return
-  c.task[] = @async begin
-    sleep(delay)
-    realigncanvas!(c)
-    applyconstraints!(c)
-    c.datasrc.generate!(c.buf[], c)
-    c.buf[] = c.buf[]  # force observable triggers
-    c.dirty[] = false
-  end
+  # FIXME: disabled deferred updates, as they go out of sync for multiple canvas
+  # first || c.task[].state === :done || return
+  # c.task[] = @async begin
+  #   sleep(delay)
+  realigncanvas!(c)
+  applyconstraints!(c)
+  c.datasrc.generate!(c.buf[], c)
+  c.buf[] = c.buf[]  # force observable triggers
+  c.dirty[] = false
+  # end
 end
 
 function pancanvas!(c::Canvas, dx; rubberband=true)
   c.datasrc.xpan || c.datasrc.ypan || return
   c.datasrc.xpan || dx[1] == 0 || (dx = [0, dx[2]])
   c.datasrc.ypan || dx[2] == 0 || (dx = [dx[1], 0])
+  abs(dx[1]) < 1 && abs(dx[2]) < 1 && return
   ijrect = c.ijrect[]
   c.ijrect[] = ℛ(
     round(Int, left(ijrect) - dx[1]),
@@ -402,7 +404,7 @@ function addaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false, bor
         align=(:right, :center))
     end
   end
-  # TODO: remove hardcoded 50 and 75
+  # FIXME: remove hardcoded 50 and 75
   xlabel === missing || text!(scene, xlabel; position=lift(r ->
     (left(r) + width(r)/2 - 50, bottom(r) - 4*ticksize - textsize), r),
     textsize=textsize, color=color, align=(:center, :bottom))
