@@ -105,16 +105,24 @@ function updatecanvas!(c::Canvas; invalidate=true, delay=0.1, first=false)
   invalidate && (c.dirty[] = true)
   isopen(c.parent.scene) || return
   c.dirty[] || return
-  # FIXME: disabled deferred updates, as they go out of sync for multiple canvas
-  # first || c.task[].state === :done || return
-  # c.task[] = @async begin
-  #   sleep(delay)
-  realigncanvas!(c)
-  applyconstraints!(c)
-  c.datasrc.generate!(c.buf[], c)
-  c.buf[] = c.buf[]  # force observable triggers
-  c.dirty[] = false
-  # end
+  if length(c.parent.children) == 1
+    first || c.task[].state === :done || return
+    c.task[] = @async begin
+      sleep(delay)
+      realigncanvas!(c)
+      applyconstraints!(c)
+      c.datasrc.generate!(c.buf[], c)
+      c.buf[] = c.buf[]  # force observable triggers
+      c.dirty[] = false
+    end
+  else
+    # FIXME: disabled deferred updates for multiple canvas, as they go out of sync
+    realigncanvas!(c)
+    applyconstraints!(c)
+    c.datasrc.generate!(c.buf[], c)
+    c.buf[] = c.buf[]  # force observable triggers
+    c.dirty[] = false
+  end
 end
 
 function pancanvas!(c::Canvas, dx; rubberband=true)
