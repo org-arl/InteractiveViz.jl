@@ -1,6 +1,8 @@
 # InteractiveViz.jl
 Interactive visualization tools for Julia
 
+![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/julia.png)
+
 ### Yet another plotting package?
 
 Julia already has a rich set of plotting tools in the form of the [Plots](https://github.com/JuliaPlots/Plots.jl) and [Makie](https://github.com/JuliaPlots/Makie.jl) ecosystems, and various backends for these. So why another plotting package?
@@ -57,7 +59,7 @@ You can zoom and pan to see details:
 Next, let us visualize the famous Mandelbrot set:
 ```julia
 julia> using InteractiveViz.demo
-julia> iheatmap(mandelbrot, -2, 0.66, -1, 1; overlay=true, axescolor=:white, cursor=true);
+julia> iheatmap(julia, -2, 2, -1.75, 1.75; overlay=true, axescolor=:white, colormap=:magma);
 ```
 
 ![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot3a.png)
@@ -65,6 +67,14 @@ julia> iheatmap(mandelbrot, -2, 0.66, -1, 1; overlay=true, axescolor=:white, cur
 Try zooming in to a tiny part of the image, and see the fractal nature of the image render itself dynamically at full resolution!
 
 ![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot3b.png)
+
+And how can we forget the Julia set?
+```julia
+julia> using InteractiveViz.demo
+julia> iheatmap(julia, -2, 2, -1.75, 1.75; overlay=true, axescolor=:white, colormap=:magma);
+```
+
+![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot5.png)
 
 You could of course plot a large heatmap stored in a matrix as well.
 ```julia
