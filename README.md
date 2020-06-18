@@ -59,7 +59,7 @@ You can zoom and pan to see details:
 Next, let us visualize the famous Mandelbrot set:
 ```julia
 julia> using InteractiveViz.demo
-julia> iheatmap(julia, -2, 2, -1.75, 1.75; overlay=true, axescolor=:white, colormap=:magma);
+julia> iheatmap(mandelbrot, -2, 0.66, -1, 1; overlay=true, axescolor=:white, cursor=true);
 ```
 
 ![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot3a.png)
