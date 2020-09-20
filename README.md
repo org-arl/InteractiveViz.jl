@@ -23,6 +23,7 @@ This package does not aim to provide comprehensive production quality plotting. 
 ```julia
 julia>]
 pkg> add InteractiveViz
+pkg> add GLMakie
 ```
 
 ### Dependencies
@@ -36,6 +37,7 @@ Detailed documentation for this package is still work-in-progress. The following
 Let's start off visualizing a simple function of one variable:
 ```julia
 julia> using InteractiveViz
+julia> using GLMakie
 julia> iplot(sin, 0, 100);
 ```
 

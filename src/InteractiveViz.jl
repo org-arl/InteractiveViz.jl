@@ -1,6 +1,6 @@
 module InteractiveViz
 
-using Makie
+using AbstractPlotting
 using Printf
 using Colors
 using Statistics
