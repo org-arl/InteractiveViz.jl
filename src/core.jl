@@ -200,33 +200,41 @@ function resetcanvas!(c::Canvas)
 end
 
 function bindevents!(c::Canvas)
-  on(c.parent.scene.events.scroll) do dx
-    pancanvas!(c, dx)
+  on(events(c.parent.scene).scroll) do dx
+     pancanvas!(c, dx)
+     return Consume(false)
   end
-  on(c.parent.scene.events.mousebuttons) do but
-    ispressed(but, Mouse.right) && resetcanvas!(c)
-  end
-  on(c.parent.scene.events.keyboardbuttons) do but
-    ispressed(but, keymap[:pan_left]) && pancanvas!(c, [-width(c.ijrect)/8, 0.0])
-    ispressed(but, keymap[:pan_right]) && pancanvas!(c, [width(c.ijrect)/8, 0.0])
-    ispressed(but, keymap[:pan_up]) && pancanvas!(c, [0.0, -height(c.ijrect)/8])
-    ispressed(but, keymap[:pan_down]) && pancanvas!(c, [0.0, height(c.ijrect)/8])
-    if c.datasrc.xylock
-      ispressed(but, keymap[:zoom_x_out]) && zoomcanvas!(c, [1/1.2, 1/1.2])
-      ispressed(but, keymap[:zoom_x_in]) && zoomcanvas!(c, [1.2, 1.2])
-      ispressed(but, keymap[:zoom_y_out]) && zoomcanvas!(c,[1/1.2, 1/1.2])
-      ispressed(but, keymap[:zoom_y_in]) && zoomcanvas!(c, [1.2, 1.2])
-    else
-      ispressed(but, keymap[:zoom_x_out]) && zoomcanvas!(c, [1/1.2, 1.0])
-      ispressed(but, keymap[:zoom_x_in]) && zoomcanvas!(c, [1.2, 1.0])
-      ispressed(but, keymap[:zoom_y_out]) && zoomcanvas!(c,[1.0, 1/1.2])
-      ispressed(but, keymap[:zoom_y_in]) && zoomcanvas!(c, [1.0, 1.2])
+  on(events(c.parent.scene).mousebutton) do event
+    if event.button == Mouse.right
+      if event.action == Mouse.press && resetcanvas!(c)
+      end
     end
-    ispressed(but, keymap[:brightness_down]) && brighten!(c, -0.1)
-    ispressed(but, keymap[:brightness_up]) && brighten!(c, 0.1)
-    ispressed(but, keymap[:contrast_down]) && contrast!(c, -0.1)
-    ispressed(but, keymap[:contrast_up]) && contrast!(c, 0.1)
-    ispressed(but, keymap[:reset]) && resetcanvas!(c)
+    return Consume(false)
+  end
+  on(events(c.parent.scene).keyboardbutton) do event
+    if event.action in (Keyboard.press, Keyboard.repeat)
+      event.key == keymap[:pan_left] && pancanvas!(c, [-width(c.ijrect)/8, 0.0])
+      event.key == keymap[:pan_right] && pancanvas!(c, [width(c.ijrect)/8, 0.0])
+      event.key == keymap[:pan_up] && pancanvas!(c, [0.0, -height(c.ijrect)/8])
+      event.key == keymap[:pan_down] && pancanvas!(c, [0.0, height(c.ijrect)/8])
+      if c.datasrc.xylock
+        event.key == keymap[:zoom_x_out] && zoomcanvas!(c, [1/1.2, 1/1.2])
+        event.key == keymap[:zoom_x_in] && zoomcanvas!(c, [1.2, 1.2])
+        event.key == keymap[:zoom_y_out] && zoomcanvas!(c,[1/1.2, 1/1.2])
+        event.key == keymap[:zoom_y_in] && zoomcanvas!(c, [1.2, 1.2])
+      else
+        event.key == keymap[:zoom_x_out] && zoomcanvas!(c, [1/1.2, 1.0])
+        event.key == keymap[:zoom_x_in] && zoomcanvas!(c, [1.2, 1.0])
+        event.key == keymap[:zoom_y_out] && zoomcanvas!(c,[1.0, 1/1.2])
+        event.key == keymap[:zoom_y_in] && zoomcanvas!(c, [1.0, 1.2])
+      end
+      event.key == keymap[:brightness_down] && brighten!(c, -0.1)
+      event.key == keymap[:brightness_up] && brighten!(c, 0.1)
+      event.key == keymap[:contrast_down] && contrast!(c, -0.1)
+      event.key == keymap[:contrast_up] && contrast!(c, 0.1)
+      event.key == keymap[:reset] && resetcanvas!(c)
+    end
+    return Consume(false)
   end
   on(c.parent.selrect) do r
     margin = 100

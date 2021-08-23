@@ -1,6 +1,7 @@
 module InteractiveViz
 
-using AbstractPlotting
+#using AbstractPlotting
+using GLMakie
 using Printf
 using Colors
 using Statistics
