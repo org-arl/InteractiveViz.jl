@@ -23,8 +23,9 @@ This package does not aim to provide comprehensive production quality plotting. 
 ```julia
 julia>]
 pkg> add InteractiveViz
-pkg> add GLMakie
+pkg> add GLMakie@0.2.3
 ```
+Note: `InteractiveViz` is currently not compatible with the latest `GLMakie`. The incomptibility is being fixed, and a new release should be forthcoming shortly.
 
 ### Dependencies
 
