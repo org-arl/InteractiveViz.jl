@@ -9,7 +9,7 @@ function apply!(f::Function, buf::AbstractMatrix, c::Canvas)
   end
 end
 
-function apply!(f::Function, buf::AbstractVector{Point2f0}, c::Canvas)
+function apply!(f::Function, buf::AbstractVector{Point2f}, c::Canvas)
   xyrect = c.xyrect[]
   n = width(c.ijhome)
   p = 0
@@ -17,34 +17,34 @@ function apply!(f::Function, buf::AbstractVector{Point2f0}, c::Canvas)
     y = f(x)
     if y isa AbstractVector
       for k ∈ 1:length(y)
-        ij = xy2ij(Point2f0(x, y[k]), c)
+        ij = xy2ij(Point2f(x, y[k]), c)
         p = set!(buf, p, ij)
       end
     else
-      ij = xy2ij(Point2f0(x, y), c)
+      ij = xy2ij(Point2f(x, y), c)
       p = set!(buf, p, ij)
     end
   end
   truncate!(buf, p)
-  length(buf) < 1 && push!(buf, Point2f0(Inf32, Inf32))  # needed because Makie does not like 0-point lines
+  length(buf) < 1 && push!(buf, Point2f(Inf32, Inf32))  # needed because Makie does not like 0-point lines
 end
 
-function pointcrop!(buf::AbstractVector{Point2f0}, c::Canvas)
+function pointcrop!(buf::AbstractVector{Point2f}, c::Canvas)
   data = c.datasrc.data
   data === missing && return
   xyrect = c.xyrect[]
   p = 0
   for k in 1:size(data,1)
     if left(xyrect) <= data[k,1] <= right(xyrect) && bottom(xyrect) <= data[k,2] <= top(xyrect)
-      ij = xy2ij(Point2f0(data[k,1], data[k,2]), c)
+      ij = xy2ij(Point2f(data[k,1], data[k,2]), c)
       p = set!(buf, p, ij)
     end
   end
   truncate!(buf, p)
-  length(buf) < 1 && push!(buf, Point2f0(Inf32, Inf32))  # needed because Makie does not like 0-point lines
+  length(buf) < 1 && push!(buf, Point2f(Inf32, Inf32))  # needed because Makie does not like 0-point lines
 end
 
-function linecrop!(buf::AbstractVector{Point2f0}, c::Canvas)
+function linecrop!(buf::AbstractVector{Point2f}, c::Canvas)
   data = c.datasrc.data
   data === missing && return
   p = 0
@@ -59,16 +59,16 @@ function linecrop!(buf::AbstractVector{Point2f0}, c::Canvas)
       lastpt[2] < bottom(xyrect) && data[k,2] < bottom(xyrect) && nextpt[2] < bottom(xyrect) && continue
       lastpt[2] > top(xyrect) && data[k,2] > top(xyrect) && nextpt[2] > top(xyrect) && continue
       lastpt = data[k,:]
-      ij = xy2ij(Point2f0(data[k,1], data[k,2]), c)
+      ij = xy2ij(Point2f(data[k,1], data[k,2]), c)
       p = set!(buf, p, ij)
     end
   end
   truncate!(buf, p)
-  length(buf) < 1 && push!(buf, Point2f0(Inf32, Inf32))  # needed because Makie does not like 0-point lines
+  length(buf) < 1 && push!(buf, Point2f(Inf32, Inf32))  # needed because Makie does not like 0-point lines
 end
 
 # TODO: check if average time of pooling is correct
-function linepool!(buf::AbstractVector{Point2f0}, c::Canvas; pooling=orderedextrema)
+function linepool!(buf::AbstractVector{Point2f}, c::Canvas; pooling=orderedextrema)
   data = c.datasrc.data
   data === missing && return
   n = size(data,1)
@@ -87,7 +87,7 @@ function linepool!(buf::AbstractVector{Point2f0}, c::Canvas; pooling=orderedextr
     b = fld(n2 - n1, m)
     if b <= 1
       for k ∈ n1:n2
-        ij = xy2ij(Point2f0(data[k,1], data[k,2]), c)
+        ij = xy2ij(Point2f(data[k,1], data[k,2]), c)
         p = set!(buf, p, ij)
       end
     else
@@ -97,14 +97,14 @@ function linepool!(buf::AbstractVector{Point2f0}, c::Canvas; pooling=orderedextr
         blk = @view data[k:k2,2]
         x = (data[k,1] + data[k2,1]) / 2
         for y ∈ pooling(blk)
-          ij = xy2ij(Point2f0(x, y), c)
+          ij = xy2ij(Point2f(x, y), c)
           p = set!(buf, p, ij)
         end
       end
     end
   end
   truncate!(buf, p)
-  length(buf) < 1 && push!(buf, Point2f0(Inf32, Inf32))  # needed because Makie does not like 0-point lines
+  length(buf) < 1 && push!(buf, Point2f(Inf32, Inf32))  # needed because Makie does not like 0-point lines
 end
 
 function heatmappool!(buf::AbstractMatrix, c::Canvas; pooling=mean)
@@ -121,7 +121,7 @@ function heatmappool!(buf::AbstractMatrix, c::Canvas; pooling=mean)
   ppi = xpi / xpp
   qpj = ypj / ypq
   for j ∈ 1:jwidth
-    for i ∈ 1:iwidth
+    Threads.@threads for i ∈ 1:iwidth
       p = ((i - 1) * xpi + left(xyrect) - left(xylims)) / xpp
       q = ((j - 1) * ypj + bottom(xyrect) - bottom(xylims)) / ypq
       p1 = round(Int, p - ppi/2) + 1
@@ -129,14 +129,14 @@ function heatmappool!(buf::AbstractMatrix, c::Canvas; pooling=mean)
       q1 = round(Int, q - qpj/2) + 1
       q2 = round(Int, q + qpj/2) + 1
       if p1 > pwidth || p2 < 1 || q1 > qwidth || q2 < 1
-        buf[i,j] = 0
+        @inbounds  buf[i,j] = 0
       else
         p1 < 1 && (p1 = 1)
         p2 > pwidth && (p2 = pwidth)
         q1 < 1 && (q1 = 1)
         q2 > qwidth && (q2 = qwidth)
         blk = @view data[p1:p2,q1:q2]
-        buf[i,j] = pooling(blk)
+        @inbounds  buf[i,j] = pooling(blk)
       end
     end
   end

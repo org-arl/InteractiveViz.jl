@@ -214,7 +214,7 @@ function autorange(y, margin=0.0)
 end
 
 inset(r::ℛ, li, ri, bi, ti) = ℛ(left(r) + li, bottom(r) + bi, width(r) - li - ri, height(r) - bi - ti)
-inset(r::Node{ℛ{T}}, li, ri, bi, ti) where T = lift(r -> ℛ(left(r) + li, bottom(r) + bi, width(r) - li - ri, height(r) - bi - ti), r)
+inset(r::Observable{ℛ{T}}, li, ri, bi, ti) where T = lift(r -> ℛ(left(r) + li, bottom(r) + bi, width(r) - li - ri, height(r) - bi - ti), r)
 
 function datasource(; kwargs...)
   dargs = Dict()
