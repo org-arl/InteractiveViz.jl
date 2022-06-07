@@ -16,13 +16,13 @@ top(r::ℛ{<:AbstractFloat}) = r.bottom + r.height
 height(r::ℛ) = r.height
 aspectratio(r::ℛ) = r.width / r.height
 
-left(r::Node) = left(r[])
-right(r::Node) = right(r[])
-width(r::Node) = width(r[])
-bottom(r::Node) = bottom(r[])
-top(r::Node) = top(r[])
-height(r::Node) = height(r[])
-aspectratio(r::Node) = aspectratio(r[])
+left(r::Observable) = left(r[])
+right(r::Observable) = right(r[])
+width(r::Observable) = width(r[])
+bottom(r::Observable) = bottom(r[])
+top(r::Observable) = top(r[])
+height(r::Observable) = height(r[])
+aspectratio(r::Observable) = aspectratio(r[])
 
 function ℛ(r::ℛ; left=missing, bottom=missing, width=missing, height=missing)
   left === missing && (left = r.left)
@@ -32,7 +32,7 @@ function ℛ(r::ℛ; left=missing, bottom=missing, width=missing, height=missing
   ℛ(left, bottom, width, height)
 end
 
-ℛ(r::Node; kwargs...) = ℛ(r[]; kwargs...)
+ℛ(r::Observable; kwargs...) = ℛ(r[]; kwargs...)
 
 abstract type Canvas end
 
@@ -63,42 +63,42 @@ end
 
 Base.@kwdef struct Viz
   scene::Scene
-  ijrect::Node{ℛ{Int}}       # size of window in pixels
-  selrect::Node{ℛ{Int}}      # last selected rectangle
+  ijrect::Observable{ℛ{Int}}       # size of window in pixels
+  selrect::Observable{ℛ{Int}}      # last selected rectangle
   children::Vector{Canvas}
 end
 
 Base.@kwdef struct HeatmapCanvas <: Canvas
   parent::Viz
-  ijhome::Node{ℛ{Int}}       # home location for canvas in pixels
-  ijrect::Node{ℛ{Int}}       # current location for canvas in pixels
-  xyrect::Node{ℛ{Float64}}   # canvas extents in data coordinates
-  clim::Node{Tuple}
-  buf::Node{Matrix{Float32}}
+  ijhome::Observable{ℛ{Int}}       # home location for canvas in pixels
+  ijrect::Observable{ℛ{Int}}       # current location for canvas in pixels
+  xyrect::Observable{ℛ{Float64}}   # canvas extents in data coordinates
+  clim::Observable{Tuple}
+  buf::Observable{Matrix{Float32}}
   datasrc::DataSource
-  dirty::Node{Bool}
+  dirty::Observable{Bool}
   task::Ref{Task}
 end
 
 Base.@kwdef struct ScatterCanvas <: Canvas
   parent::Viz
-  ijhome::Node{ℛ{Int}}       # home location for canvas in pixels
-  ijrect::Node{ℛ{Int}}       # current location for canvas in pixels
-  xyrect::Node{ℛ{Float64}}   # canvas extents in data coordinates
-  buf::Node{Vector{Point2f0}}
+  ijhome::Observable{ℛ{Int}}       # home location for canvas in pixels
+  ijrect::Observable{ℛ{Int}}       # current location for canvas in pixels
+  xyrect::Observable{ℛ{Float64}}   # canvas extents in data coordinates
+  buf::Observable{Vector{Point2f}}
   datasrc::DataSource
-  dirty::Node{Bool}
+  dirty::Observable{Bool}
   task::Ref{Task}
 end
 
 Base.@kwdef struct LineCanvas <: Canvas
   parent::Viz
-  ijhome::Node{ℛ{Int}}       # home location for canvas in pixels
-  ijrect::Node{ℛ{Int}}       # current location for canvas in pixels
-  xyrect::Node{ℛ{Float64}}   # canvas extents in data coordinates
-  buf::Node{Vector{Point2f0}}
+  ijhome::Observable{ℛ{Int}}       # home location for canvas in pixels
+  ijrect::Observable{ℛ{Int}}       # current location for canvas in pixels
+  xyrect::Observable{ℛ{Float64}}   # canvas extents in data coordinates
+  buf::Observable{Vector{Point2f}}
   datasrc::DataSource
-  dirty::Node{Bool}
+  dirty::Observable{Bool}
   task::Ref{Task}
 end
 

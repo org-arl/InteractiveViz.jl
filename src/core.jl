@@ -23,8 +23,8 @@ function ifigure(; width=1024, height=768, hold=false, show=true)
   hold && curviz[] !== nothing && return curviz[]
   curviz[] = Viz(
     scene = Scene(resolution=(width,height), camera=campixel!),
-    ijrect = Node(ℛ(0, 0, width, height)),
-    selrect = Node(ℛ(0, 0, width, height)),
+    ijrect = Observable(ℛ(0, 0, width, height)),
+    selrect = Observable(ℛ(0, 0, width, height)),
     children = Canvas[]
   )
   show && display(curviz[].scene)
@@ -52,9 +52,9 @@ function ij2xy(i, j, c::Canvas)
   (x, y)
 end
 
-function ij2xy(p::Point2f0, c::Canvas)
+function ij2xy(p::Point2f, c::Canvas)
   x, y = ij2xy(p[1], p[2], c)
-  Point2f0(x, y)
+  Point2f(x, y)
 end
 
 function ij2xy(p::ℛ, c::Canvas)
@@ -71,9 +71,9 @@ function xy2ij(x, y, c::Canvas)
   (i, j)
 end
 
-function xy2ij(p::Point2f0, c::Canvas)
+function xy2ij(p::Point2f, c::Canvas)
   i, j = xy2ij(p[1], p[2], c)
-  Point2f0(i, j)
+  Point2f(i, j)
 end
 
 function xy2ij(dtype::DataType, x, y, c::Canvas)
@@ -251,17 +251,17 @@ function mkcanvas(::Type{HeatmapCanvas}, viz, ijhome, datasrc, kwargs)
   canvas = HeatmapCanvas(
     parent = viz,
     ijhome = ijhome,
-    ijrect = Node(ijhome[]),
-    xyrect = Node(datasrc.xyrect),
-    clim = Node(datasrc.clim),
-    buf = Node(zeros(Float32, width(ijhome), height(ijhome))),
+    ijrect = Observable(ijhome[]),
+    xyrect = Observable(datasrc.xyrect),
+    clim = Observable(datasrc.clim),
+    buf = Observable(zeros(Float32, width(ijhome), height(ijhome))),
     datasrc = datasrc,
-    dirty = Node{Bool}(true),
+    dirty = Observable{Bool}(true),
     task = Ref{Task}()
   )
   x = lift(r -> left(r) : right(r), canvas.ijrect)
   y = lift(r -> bottom(r) : top(r), canvas.ijrect)
-  heatmap!(viz.scene, x, y, canvas.buf; show_axis=false, colorrange=canvas.clim, kwargs...)
+  heatmap!(viz.scene, x, y, canvas.buf; colorrange=canvas.clim, kwargs...)
   on(ijhome) do r
     xscale = width(canvas.xyrect) / width(canvas.ijrect)
     yscale = height(canvas.xyrect) / height(canvas.ijrect)
@@ -277,17 +277,17 @@ function mkcanvas(::Type{ScatterCanvas}, viz, ijhome, datasrc, kwargs)
   canvas = ScatterCanvas(
     parent = viz,
     ijhome = ijhome,
-    ijrect = Node(ijhome[]),
-    xyrect = Node(datasrc.xyrect),
-    buf = Node(Point2f0[]),
+    ijrect = Observable(ijhome[]),
+    xyrect = Observable(datasrc.xyrect),
+    buf = Observable(Point2f[]),
     datasrc = datasrc,
-    dirty = Node{Bool}(true),
+    dirty = Observable{Bool}(true),
     task = Ref{Task}()
   )
   if :markersize ∈ keys(kwargs)
-    scatter!(viz.scene, canvas.buf; show_axis=false, kwargs...)
+    scatter!(viz.scene, canvas.buf; kwargs...)
   else
-    scatter!(viz.scene, canvas.buf; show_axis=false, markersize=1, kwargs...)
+    scatter!(viz.scene, canvas.buf; markersize=1, kwargs...)
   end
   on(ijhome) do r
     canvas.ijrect[] = r
@@ -300,14 +300,14 @@ function mkcanvas(::Type{LineCanvas}, viz, ijhome, datasrc, kwargs)
   canvas = LineCanvas(
     parent = viz,
     ijhome = ijhome,
-    ijrect = Node(ijhome[]),
-    xyrect = Node(datasrc.xyrect),
-    buf = Node(Point2f0[(Inf32, Inf32)]),
+    ijrect = Observable(ijhome[]),
+    xyrect = Observable(datasrc.xyrect),
+    buf = Observable(Point2f[(Inf32, Inf32)]),
     datasrc = datasrc,
-    dirty = Node{Bool}(true),
+    dirty = Observable{Bool}(true),
     task = Ref{Task}()
   )
-  lines!(viz.scene, canvas.buf; show_axis=false, kwargs...)
+  lines!(viz.scene, canvas.buf; kwargs...)
   on(ijhome) do r
     canvas.ijrect[] = r
     updatecanvas!(canvas)
@@ -319,11 +319,11 @@ function addcanvas!(ctype, viz::Viz, datasrc::DataSource; rect=nothing, kwargs..
   if rect === nothing
     ijhome = lift(r -> r, viz.ijrect)
   elseif rect isa ℛ
-    ijhome = Node(rect)
-  elseif rect isa Node
+    ijhome = Observable(rect)
+  elseif rect isa Observable
     ijhome = rect
   else
-    ijhome = Node(ℛ(rect[1], rect[2], rect[3], rect[4]))
+    ijhome = Observable(ℛ(rect[1], rect[2], rect[3], rect[4]))
   end
   canvas = mkcanvas(ctype, viz, ijhome, datasrc, kwargs)
   push!(viz.children, canvas)
@@ -338,62 +338,62 @@ end
 function addaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false, border=0, bordercolor=:white, xlabel=missing, ylabel=missing, xticks=5, yticks=5, ticksize=10, textsize=15.0)
   scene = c.parent.scene
   if border > 0
-    poly!(scene, lift(r -> Point2f0[
+    poly!(scene, lift(r -> Point2f[
       (left(r) - border, bottom(r)),
       (right(r) + border, bottom(r)),
       (right(r) + border, bottom(r) - border),
       (left(r) - border, bottom(r) - border)
-    ], c.ijhome); show_axis=false, color=bordercolor)
-    poly!(scene, lift(r -> Point2f0[
+    ], c.ijhome); color=bordercolor)
+    poly!(scene, lift(r -> Point2f[
       (left(r) - border, top(r)),
       (right(r) + border, top(r)),
       (right(r) + border, top(r) + border),
       (left(r) - border, top(r) + border)
-    ], c.ijhome); show_axis=false, color=bordercolor)
-    poly!(scene, lift(r -> Point2f0[
+    ], c.ijhome); color=bordercolor)
+    poly!(scene, lift(r -> Point2f[
       (left(r), bottom(r)),
       (left(r) - border, bottom(r)),
       (left(r) - border, top(r)),
       (left(r), top(r))
-    ], c.ijhome); show_axis=false, color=bordercolor)
-    poly!(scene, lift(r -> Point2f0[
+    ], c.ijhome); color=bordercolor)
+    poly!(scene, lift(r -> Point2f[
       (right(r), bottom(r)),
       (right(r) + border, bottom(r)),
       (right(r) + border, top(r)),
       (right(r), top(r))
-    ], c.ijhome); show_axis=false, color=bordercolor)
+    ], c.ijhome); color=bordercolor)
   end
   r = c.ijhome
   inset != 0 && (r = lift(r -> ℛ(
     left(r) + inset, bottom(r) + inset,
     width(r) - 2*inset - 1, height(r) - 2*inset - 1), c.ijhome))
   if frame
-    lines!(scene, lift(r -> Point2f0[
+    lines!(scene, lift(r -> Point2f[
       (right(r), bottom(r)),
       (left(r), bottom(r)),
       (left(r), top(r)),
       (right(r), top(r)),
       (right(r), bottom(r))
-    ], r); show_axis=false, color=color)
+    ], r); color=color)
   else
-    lines!(scene, lift(r -> Point2f0[
+    lines!(scene, lift(r -> Point2f[
       (right(r), bottom(r)),
       (left(r), bottom(r)),
       (left(r), top(r))
-    ], r); show_axis=false, color=color)
+    ], r); color=color)
   end
   xticktext(i, c) = formatnums(ij2xy(i, 0, c)[1])
   if xticks > 0
     linesegments!(scene, lift(r -> [
-      Point2f0(left(r) + k * width(r) / xticks, bottom(r)) =>
-      Point2f0(left(r) + k * width(r) / xticks, bottom(r) - ticksize)
+      Point2f(left(r) + k * width(r) / xticks, bottom(r)) =>
+      Point2f(left(r) + k * width(r) / xticks, bottom(r) - ticksize)
       for k ∈ 0:xticks
-    ], r); show_axis=false, color=color)
+    ], r); color=color)
     grid && linesegments!(scene, lift(r -> [
-      Point2f0(left(r) + k * width(r) / xticks, bottom(r)) =>
-      Point2f0(left(r) + k * width(r) / xticks, top(r))
+      Point2f(left(r) + k * width(r) / xticks, bottom(r)) =>
+      Point2f(left(r) + k * width(r) / xticks, top(r))
       for k ∈ 0:xticks
-    ], r); show_axis=false, color=color, linestyle=:dot)
+    ], r); color=color, linestyle=:dot)
     for k ∈ 0:xticks
       text!(scene, lift((r, xy) -> xticktext(left(r) + k * width(r) / xticks, c), r, c.xyrect);
         position=lift(r -> (left(r) + k * width(r) / xticks, bottom(r) - ticksize - textsize/2), r),
@@ -404,15 +404,15 @@ function addaxes!(c::Canvas; inset=0, color=:black, frame=false, grid=false, bor
   yticktext(j, c) = formatnums(ij2xy(0, j, c)[2])
   if yticks > 0
     linesegments!(scene, lift(r -> [
-      Point2f0(left(r), bottom(r) + k * height(r) / yticks) =>
-      Point2f0(left(r) - ticksize, bottom(r) + k * height(r) / yticks)
+      Point2f(left(r), bottom(r) + k * height(r) / yticks) =>
+      Point2f(left(r) - ticksize, bottom(r) + k * height(r) / yticks)
       for k ∈ 0:yticks
-    ], r); show_axis=false, color=color)
+    ], r); color=color)
     grid && linesegments!(scene, lift(r -> [
-      Point2f0(left(r), bottom(r) + k * height(r) / yticks) =>
-      Point2f0(right(r), bottom(r) + k * height(r) / yticks)
+      Point2f(left(r), bottom(r) + k * height(r) / yticks) =>
+      Point2f(right(r), bottom(r) + k * height(r) / yticks)
       for k ∈ 0:yticks
-    ], r); show_axis=false, color=color, linestyle=:dot)
+    ], r); color=color, linestyle=:dot)
     for k ∈ 0:yticks
       text!(scene, lift((r, xy) -> yticktext(bottom(r) + k * height(r) / yticks, c), r, c.xyrect);
         position=lift(r -> (float(left(r) - ticksize), bottom(r) + k * height(r) / yticks), r),
@@ -435,7 +435,7 @@ function addcursor!(c::Canvas; position=nothing, color=:black, textsize=15.0, al
     position = lift(r -> (right(r) - 20, top(r) - 20), c.ijhome)
     align=(:right, :top)
   end
-  s = Node(" ")
+  s = Observable(" ")
   text!(c.parent.scene, s; position=position, align=align, textsize=textsize, color=color)
   on(c.parent.scene.events.mouseposition) do ij
     if left(c.ijhome) <= ij[1] <= right(c.ijhome) && bottom(c.ijhome) <= ij[2] <= top(c.ijhome)
