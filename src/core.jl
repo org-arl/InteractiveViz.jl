@@ -206,7 +206,8 @@ function bindevents!(c::Canvas)
   end
   on(events(c.parent.scene).mousebutton) do event
     if event.button == Mouse.right
-      if event.action == Mouse.press && resetcanvas!(c)
+      if event.action == Mouse.press
+        resetcanvas!(c)
       end
     end
     return Consume(false)
