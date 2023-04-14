@@ -1,5 +1,4 @@
 using GeometryBasics
-using SparseArrays
 using Statistics
 
 ###############################
@@ -38,19 +37,16 @@ struct Point2fSet{S1<:AbstractVector{Point2f},S2<:AbstractVector{Int}} <: PointS
   multiplicity::S2
 end
 
-# FIXME too slow
 function sample(data::Point2fSet, xrange, yrange)
   length(data.points) < length(xrange) * length(yrange) && return data
   ndx = findall(p -> xrange[1] ≤ p[1] ≤ xrange[end] && yrange[1] ≤ p[2] ≤ yrange[end], data.points)
   length(ndx) < length(xrange) * length(yrange) && return data
-  #a = spzeros(Int, length(xrange), length(yrange))
   a = zeros(Int, length(xrange), length(yrange))
   for (p, n) ∈ @views zip(data.points[ndx], data.multiplicity[ndx])
     i = round(Int, (p[1] - first(xrange)) / step(xrange)) + 1
     j = round(Int, (p[2] - first(yrange)) / step(yrange)) + 1
     a[i,j] += n
   end
-  #ii, jj, m = findnz(a)
   ndx = findall(>(0), a)
   ii = map(x -> x.I[1], ndx)
   jj = map(x -> x.I[2], ndx)
@@ -63,14 +59,59 @@ end
 struct Samples1D{S1<:AbstractVector,S2<:AbstractVector} <: Continuous1D
   x::S1
   y::S2
+  function Samples1D(x, y)
+    issorted(x) || throw(ArgumentError("x must be ordered"))
+    length(x) == length(y) || throw(ArgumentError("Size mismatch between x and y"))
+    new{typeof(x),typeof(y)}(x, y)
+  end
 end
 
-function sample(data::Samples1D, xrange, yrange; pool=mean, interpolate=nearest)
-  y = map(xrange) do x
-    i = mapsto(data.x, x, step(xrange))
-    isempty(i) ? interpolate(data.x, data.y, x) : mean(data.y[i])
+function sample(data::Samples1D, xrange, yrange; pool=extrema, interpolate=linear)
+  xs = similar(xrange, 0)
+  ys = Array{promote_type(eltype(data.y),Missing)}(undef, 0)
+  sizehint!(xs, length(xrange))
+  sizehint!(ys, length(xrange))
+  i = firstindex(data.x)
+  Δxby2 = step(xrange) / 2
+  for j ∈ eachindex(xrange)
+    x = xrange[j]
+    if i ≤ lastindex(data.x) && data.x[i] < x + Δxby2
+      i1 = findnext(≥(x - Δxby2), data.x, i)
+      if i1 === nothing
+        push!(xs, x)
+        push!(ys, interpolate(data.x, data.y, x))
+      else
+        i2 = i1
+        while i2+1 ≤ lastindex(data.x) && data.x[i2+1] < x + Δxby2
+          i2 += 1
+        end
+        y = pool(data.y[i1:i2])
+        if y isa Tuple
+          if y[1] == y[2]
+            push!(xs, x)
+            push!(ys, y[1])
+          else
+            push!(xs, x)
+            push!(xs, x)
+            push!(xs, x)
+            push!(xs, x)
+            push!(ys, (y[1] + y[2]) / 2)
+            push!(ys, y[1])
+            push!(ys, y[2])
+            push!(ys, (y[1] + y[2]) / 2)
+          end
+        else
+          push!(xs, x)
+          push!(ys, y)
+        end
+        i = i2 + 1
+      end
+    else
+      push!(xs, x)
+      push!(ys, interpolate(data.x, data.y, x))
+    end
   end
-  Samples1D(xrange, y)
+  Samples1D(xs, ys)
 end
 
 ### 2D sampled data
@@ -79,6 +120,12 @@ struct Samples2D{S1<:AbstractVector,S2<:AbstractMatrix} <: Continuous2D
   x::S1
   y::S1
   z::S2
+  function Samples2D(x, y, z)
+    issorted(x) || throw(ArgumentError("x must be sorted"))
+    issorted(y) || throw(ArgumentError("y must be sorted"))
+    size(z) == (length(x), length(y)) || throw(ArgumentError("Size mismatch between x, y and z"))
+    new{promote_type(typeof(x),typeof(y)),typeof(z)}(x, y, z)
+  end
 end
 
 function sample(data::Samples2D, xrange, yrange; pool=mean)
@@ -113,7 +160,13 @@ sample(data::Function2D, xrange, yrange) = Samples2D(xrange, yrange, [data.f(x,y
 ### helpers
 ###############################
 
-mapsto(xs, x, Δx) = findall(x̄ -> -Δx/2 ≤ x - x̄ < Δx/2, xs)
+function mapsto(xs, x, Δx)
+  i1 = findfirst(≥(x - Δx/2), xs)
+  i1 === nothing && return missing
+  i2 = findlast(<(x + Δx/2), xs)
+  i2 ≥ i1 || return missing
+  i1:i2
+end
 
 function nearest(xs, ys, x)
   (x < minimum(xs) || x > maximum(xs)) && return missing
