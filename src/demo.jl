@@ -1,4 +1,4 @@
-module demo
+module Demo
 
 export mandelbrot, julia
 
