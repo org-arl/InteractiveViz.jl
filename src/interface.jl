@@ -24,17 +24,17 @@ ilines(g, y::AbstractVector; kwargs...) = iviz((x, y) -> lines(g, x, y; kwargs..
 ilines(g, x::AbstractVector, y::AbstractVector; kwargs...) = iviz((x, y) -> lines(g, x, y; kwargs...), Samples1D(x, y))
 ilines!(f::Function; kwargs...) = iviz((x, y) -> lines!(x, y; kwargs...), Function1D(f))
 ilines!(y::AbstractVector; kwargs...) = iviz((x, y) -> lines!(x, y; kwargs...), Samples1D(eachindex(y), y))
-ilines!(x::AbstractVector, y::AbstractVector; kwargs...) = iviz((x, y) -> lines!(x, y; kwargs...), Samples1D(x, y))
+ilines!(x::AbstractRange, y::AbstractVector; kwargs...) = iviz((x, y) -> lines!(x, y; kwargs...), Samples1D(x, y))
 ilines!(g, f::Function; kwargs...) = iviz((x, y) -> lines!(g, x, y; kwargs...), Function1D(f))
 ilines!(g, y::AbstractVector; kwargs...) = iviz((x, y) -> lines!(g, x, y; kwargs...), Samples1D(eachindex(y), y))
-ilines!(g, x::AbstractVector, y::AbstractVector; kwargs...) = iviz((x, y) -> lines!(g, x, y; kwargs...), Samples1D(x, y))
+ilines!(g, x::AbstractRange, y::AbstractVector; kwargs...) = iviz((x, y) -> lines!(g, x, y; kwargs...), Samples1D(x, y))
 
 iheatmap(f::Function; kwargs...) = iviz((x, y, z) -> heatmap(x, y, z; kwargs...), Function2D(f))
-iheatmap(z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap(x, y, z; kwargs...), Samples2D(1:size(z,2), 1:size(z,1), z))
-iheatmap(x::AbstractVector, y::AbstractVector, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap(x, y, z; kwargs...), Samples2D(x, y, z))
+iheatmap(z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap(x, y, z; kwargs...), Samples2D(1:size(z,1), 1:size(z,2), z))
+iheatmap(x::AbstractRange, y::AbstractRange, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap(x, y, z; kwargs...), Samples2D(x, y, z))
 iheatmap(g, f::Function; kwargs...) = iviz((x, y, z) -> heatmap(g, x, y, z; kwargs...), Function2D(f))
-iheatmap(g, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap(g, x, y, z; kwargs...), Samples2D(1:size(z,2), 1:size(z,1), z))
-iheatmap(g, x::AbstractVector, y::AbstractVector, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap(g, x, y, z; kwargs...), Samples2D(x, y, z))
+iheatmap(g, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap(g, x, y, z; kwargs...), Samples2D(1:size(z,1), 1:size(z,2), z))
+iheatmap(g, x::AbstractRange, y::AbstractRange, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap(g, x, y, z; kwargs...), Samples2D(x, y, z))
 
 ### implementation
 

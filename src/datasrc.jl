@@ -60,83 +60,86 @@ struct Samples1D{S1<:AbstractVector,S2<:AbstractVector} <: Continuous1D
   x::S1
   y::S2
   function Samples1D(x, y)
-    issorted(x) || throw(ArgumentError("x must be ordered"))
     length(x) == length(y) || throw(ArgumentError("Size mismatch between x and y"))
     new{typeof(x),typeof(y)}(x, y)
   end
 end
 
-function sample(data::Samples1D, xrange, yrange; pool=extrema, interpolate=linear)
-  xs = similar(xrange, 0)
-  ys = Array{promote_type(eltype(data.y),Missing)}(undef, 0)
-  sizehint!(xs, length(xrange))
-  sizehint!(ys, length(xrange))
-  i = firstindex(data.x)
-  Δxby2 = step(xrange) / 2
-  for j ∈ eachindex(xrange)
-    x = xrange[j]
-    if i ≤ lastindex(data.x) && data.x[i] < x + Δxby2
-      i1 = findnext(≥(x - Δxby2), data.x, i)
-      if i1 === nothing
-        push!(xs, x)
-        push!(ys, interpolate(data.x, data.y, x))
-      else
-        i2 = i1
-        while i2+1 ≤ lastindex(data.x) && data.x[i2+1] < x + Δxby2
-          i2 += 1
-        end
-        y = pool(data.y[i1:i2])
-        if y isa Tuple
-          if y[1] == y[2]
-            push!(xs, x)
-            push!(ys, y[1])
-          else
-            push!(xs, x)
-            push!(xs, x)
-            push!(xs, x)
-            push!(xs, x)
-            push!(ys, (y[1] + y[2]) / 2)
-            push!(ys, y[1])
-            push!(ys, y[2])
-            push!(ys, (y[1] + y[2]) / 2)
-          end
-        else
-          push!(xs, x)
-          push!(ys, y)
-        end
-        i = i2 + 1
-      end
-    else
-      push!(xs, x)
-      push!(ys, interpolate(data.x, data.y, x))
-    end
-  end
+function sample(data::Samples1D, xrange::AbstractRange, yrange; pool=extremes, interpolate=linear)
+  n = length(pool(zeros(eltype(data.y))))
+  xrange = narrow(xrange, data.x)
+  xs = repeat(xrange; inner=n)
+  ys = similar(data.y, length(xs))
+  sample1D!(ys, data.x, data.y, xrange, n, pool, interpolate)
   Samples1D(xs, ys)
+end
+
+# kernel function separated out to improve inference
+function sample1D!(ys, data_x, data_y, xrange, n, pool, interpolate)
+  Threads.@threads for i ∈ eachindex(xrange)
+    x = xrange[i]
+    r = mapsto(data_x, x, step(xrange))
+    y = r === nothing ? interpolate(data_x, data_y, x) : pool(@view data_y[r])
+    ys[n*i-n+1:n*i] .= y
+  end
 end
 
 ### 2D sampled data
 
-struct Samples2D{S1<:AbstractVector,S2<:AbstractMatrix} <: Continuous2D
+struct Samples2D{S1<:AbstractRange,S2<:AbstractMatrix} <: Continuous2D
   x::S1
   y::S1
   z::S2
   function Samples2D(x, y, z)
-    issorted(x) || throw(ArgumentError("x must be sorted"))
-    issorted(y) || throw(ArgumentError("y must be sorted"))
     size(z) == (length(x), length(y)) || throw(ArgumentError("Size mismatch between x, y and z"))
     new{promote_type(typeof(x),typeof(y)),typeof(z)}(x, y, z)
   end
 end
 
-function sample(data::Samples2D, xrange, yrange; pool=mean)
-  z = map(Iterators.product(xrange, yrange)) do (x, y)
-    j = mapsto(data.x, x, step(xrange))
-    i = mapsto(data.y, y, step(xrange))
-    (i < 1 || i > size(data.z, 1)) && return missing
-    (j < 1 || j > size(data.z, 2)) && return missing
-    pool(data.z[i,j])
+function sample(data::Samples2D, xrange::AbstractRange, yrange::AbstractRange)
+  xrange = intersection(xrange, data.x)
+  yrange = intersection(yrange, data.y)
+  z = zeros(eltype(data.z), length(xrange), length(yrange))
+  Δx = step(xrange)
+  if Δx == 0
+    xis = 1:1
+  else
+    xi1 = findfirst(≥(first(xrange)), data.x)
+    xi2 = findlast(≤(last(xrange)), data.x)
+    xis = xi1:xi2
   end
+  xxis = round.(Int, (data.x[xis] .- first(xrange)) ./ Δx) .+ 1
+  Δy = step(yrange)
+  if Δy == 0
+    yis = 1:1
+  else
+    yi1 = findfirst(≥(first(yrange)), data.y)
+    yi2 = findlast(≤(last(yrange)), data.y)
+    yis = yi1:yi2
+  end
+  yyis = round.(Int, (data.y[yis] .- first(yrange)) ./ Δy) .+ 1
+  parts = UnitRange{Int}[]
+  i = 1
+  for j ∈ 2:length(yyis)
+    if yyis[i] != yyis[j]
+      push!(parts, i:j-1)
+      i = j
+    end
+  end
+  push!(parts, i:length(yyis))
+  sample2D!(z, xis, xxis, yis, yyis, parts, data.z, max)
   Samples2D(xrange, yrange, z)
+end
+
+# kernel function separated out to improve inference
+function sample2D!(z, xis, xxis, yis, yyis, parts, data_z, op)
+  Threads.@threads for p ∈ parts
+    for (yi, yyi) ∈ zip(@view(yis[p]), @view(yyis[p]))
+      for (xi, xxi) ∈ zip(xis, xxis)
+        z[xxi,yyi] = op(z[xxi,yyi], data_z[xi,yi])
+      end
+    end
+  end
 end
 
 ### 1D function
@@ -160,12 +163,20 @@ sample(data::Function2D, xrange, yrange) = Samples2D(xrange, yrange, [data.f(x,y
 ### helpers
 ###############################
 
-function mapsto(xs, x, Δx)
-  i1 = findfirst(≥(x - Δx/2), xs)
-  i1 === nothing && return missing
-  i2 = findlast(<(x + Δx/2), xs)
-  i2 ≥ i1 || return missing
-  i1:i2
+function mapsto(xs::AbstractRange, x, Δx)
+  x + Δx / 2 < first(xs) && return nothing
+  x - Δx / 2 > last(xs) && return nothing
+  i1 = (x - Δx / 2 - first(xs)) / step(xs)
+  i2 = (x + Δx / 2 - first(xs)) / step(xs)
+  floor(i2) < i1 && return nothing
+  max(ceil(Int, i1 + 1), 1):min(floor(Int, i2 + 1), length(xs))
+end
+
+function mapsto_nearest(xs::AbstractRange, x, Δx)
+  i1 = (x - Δx / 2 - first(xs)) / step(xs)
+  i2 = (x + Δx / 2 - first(xs)) / step(xs)
+  floor(i2) < i1 && return clamp(round(Int, i1), firstindex(xs), lastindex(xs))
+  max(ceil(Int, i1 + 1), 1):min(floor(Int, i2 + 1), length(xs))
 end
 
 function nearest(xs, ys, x)
@@ -186,4 +197,27 @@ function linear(xs::AbstractRange, ys, x)
   i⁺ = ceil(Int, i)
   (i⁻ < 1 || i⁺ > length(xs)) && return missing
   ys[i⁻] * (i⁺ - i) + ys[i⁺] * (i - i⁻)
+end
+
+# same as Base.extreme(), but much faster!
+extremes(x) = (minimum(x), maximum(x))
+
+function narrow(xrange, x)
+  if first(xrange) < first(x)
+    j = Int(cld(first(x) - first(xrange), step(xrange)))
+    j > length(xrange) && return xrange[1:0]
+    xrange = xrange[begin+j:end]
+  end
+  if last(xrange) > last(x)
+    j = Int(cld(last(xrange) - last(x), step(xrange)))
+    j > length(xrange) && return xrange[1:0]
+    xrange = xrange[begin:end-j]
+  end
+  xrange
+end
+
+function intersection(xdisplayrange, xdatarange)
+  x1 = findfirst(≥(first(xdisplayrange)), xdatarange)
+  x2 = findlast(≤(last(xdisplayrange)), xdatarange)
+  range(x1, x2; step=max(step(xdisplayrange), step(xdatarange)))
 end
