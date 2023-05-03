@@ -233,7 +233,7 @@ function narrow(xrange, x)
 end
 
 function intersection(xdisplayrange, xdatarange)
-  x1 = findfirst(≥(first(xdisplayrange)), xdatarange)
-  x2 = findlast(≤(last(xdisplayrange)), xdatarange)
-  range(x1, x2; step=max(step(xdisplayrange), step(xdatarange)))
+  ndx1 = something(findlast(<(first(xdisplayrange)), xdatarange), firstindex(xdatarange))
+  ndx2 = something(findfirst(>(last(xdisplayrange)), xdatarange), lastindex(xdatarange))
+  range(xdatarange[ndx1], xdatarange[ndx2]; step=max(step(xdisplayrange), step(xdatarange)))
 end
