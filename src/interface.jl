@@ -39,9 +39,9 @@ iheatmap(g, x::AbstractRange, y::AbstractRange, z::AbstractMatrix; kwargs...) = 
 ### implementation
 
 function iviz(f, data::PointSet)
-  lims = limits(data.points)
-  xrange = range(lims[1]...; length=2)
-  yrange = range(lims[2]...; length=2)
+  lims = limits(data)
+  xrange = range(lims[1], lims[2]; length=2)
+  yrange = range(lims[3], lims[4]; length=2)
   qdata = sample(data, xrange, yrange)
   pts = Observable(qdata.points)
   fap = f(pts)
@@ -60,7 +60,8 @@ function iviz(f, data::PointSet)
 end
 
 function iviz(f, data::Continuous1D)
-  r = range(first(data.x), last(data.x); length=2)
+  lims = limits(data)
+  r = range(lims[1], lims[2]; length=2)
   qdata = sample(data, r, nothing)
   x = Observable(qdata.x)
   y = Observable(qdata.y)
@@ -81,8 +82,9 @@ function iviz(f, data::Continuous1D)
 end
 
 function iviz(f, data::Continuous2D)
-  rx = range(first(data.x), last(data.x); length=2)
-  ry = range(first(data.y), last(data.y); length=2)
+  lims = limits(data)
+  rx = range(lims[1], lims[2]; length=2)
+  ry = range(lims[3], lims[4]; length=2)
   qdata = sample(data, rx, ry)
   x = Observable(qdata.x)
   y = Observable(qdata.y)
@@ -102,10 +104,4 @@ function iviz(f, data::Continuous2D)
   update(resolution[], axislimits[])
   onany(update, resolution, axislimits)
   fap
-end
-
-function limits(pts::AbstractVector{Point2f})
-  xlims = extrema(map(p -> p[1], pts))
-  ylims = extrema(map(p -> p[2], pts))
-  (xlims, ylims)
 end
