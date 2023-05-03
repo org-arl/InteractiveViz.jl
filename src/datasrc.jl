@@ -65,7 +65,7 @@ struct Samples1D{S1<:AbstractVector,S2<:AbstractVector} <: Continuous1D
   end
 end
 
-function sample(data::Samples1D, xrange::AbstractRange, yrange; pool=extremes, interpolate=linear)
+function sample(data::Samples1D, xrange::AbstractRange, yrange; pool=extreme, interpolate=linear)
   n = length(pool(zeros(eltype(data.y))))
   xrange = narrow(xrange, data.x)
   xs = repeat(xrange; inner=n)
@@ -96,7 +96,7 @@ struct Samples2D{S1<:AbstractRange,S2<:AbstractMatrix} <: Continuous2D
   end
 end
 
-function sample(data::Samples2D, xrange::AbstractRange, yrange::AbstractRange)
+function sample(data::Samples2D, xrange::AbstractRange, yrange::AbstractRange; pool=max)
   xrange = intersection(xrange, data.x)
   yrange = intersection(yrange, data.y)
   z = zeros(eltype(data.z), length(xrange), length(yrange))
@@ -127,7 +127,7 @@ function sample(data::Samples2D, xrange::AbstractRange, yrange::AbstractRange)
     end
   end
   push!(parts, i:length(yyis))
-  sample2D!(z, xis, xxis, yis, yyis, parts, data.z, max)
+  sample2D!(z, xis, xxis, yis, yyis, parts, data.z, pool)
   Samples2D(xrange, yrange, z)
 end
 
@@ -159,26 +159,17 @@ end
 sample(data::Function2D, xrange, yrange) = Samples2D(xrange, yrange, [data.f(x,y) for x ∈ xrange, y ∈ yrange])
 
 
-###############################
-### helpers
-###############################
+##########################################
+### pooling and interpolation functions
+##########################################
 
-function mapsto(xs::AbstractRange, x, Δx)
-  x + Δx / 2 < first(xs) && return nothing
-  x - Δx / 2 > last(xs) && return nothing
-  i1 = (x - Δx / 2 - first(xs)) / step(xs)
-  i2 = (x + Δx / 2 - first(xs)) / step(xs)
-  floor(i2) < i1 && return nothing
-  max(ceil(Int, i1 + 1), 1):min(floor(Int, i2 + 1), length(xs))
-end
+"""
+    nearest(xs, ys, x)
 
-function mapsto_nearest(xs::AbstractRange, x, Δx)
-  i1 = (x - Δx / 2 - first(xs)) / step(xs)
-  i2 = (x + Δx / 2 - first(xs)) / step(xs)
-  floor(i2) < i1 && return clamp(round(Int, i1), firstindex(xs), lastindex(xs))
-  max(ceil(Int, i1 + 1), 1):min(floor(Int, i2 + 1), length(xs))
-end
-
+Finds `y` from `ys` corresponding to the nearest `x` in `xs`. The 1D arrays
+`xs` and `ys` must be of equal length, and the distance is measured as the
+absolute difference.
+"""
 function nearest(xs, ys, x)
   (x < minimum(xs) || x > maximum(xs)) && return missing
   _, i = findmin(abs, x .- xs)
@@ -191,6 +182,12 @@ function nearest(xs::AbstractRange, ys, x)
   ys[i]
 end
 
+"""
+    linear(xs, ys, x)
+
+Finds `y` corresponding to the given `x` through linear interpolation of data.
+The data is provided as 1D arrays `xs` and `ys` of equal length.
+"""
 function linear(xs::AbstractRange, ys, x)
   i = (x - first(xs)) / step(xs) + 1
   i⁻ = floor(Int, i)
@@ -199,8 +196,27 @@ function linear(xs::AbstractRange, ys, x)
   ys[i⁻] * (i⁺ - i) + ys[i⁺] * (i - i⁻)
 end
 
-# same as Base.extreme(), but much faster!
-extremes(x) = (minimum(x), maximum(x))
+"""
+    extreme(x)
+
+Returns tuple `(min(x), max(x))`. This is the same as `Base.extreme()`, but is
+much faster.
+"""
+extreme(x) = (minimum(x), maximum(x))
+
+
+###############################
+### helpers
+###############################
+
+function mapsto(xs::AbstractRange, x, Δx)
+  x + Δx / 2 < first(xs) && return nothing
+  x - Δx / 2 > last(xs) && return nothing
+  i1 = (x - Δx / 2 - first(xs)) / step(xs)
+  i2 = (x + Δx / 2 - first(xs)) / step(xs)
+  floor(i2) < i1 && return nothing
+  max(ceil(Int, i1 + 1), 1):min(floor(Int, i2 + 1), length(xs))
+end
 
 function narrow(xrange, x)
   if first(xrange) < first(x)
