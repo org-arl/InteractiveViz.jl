@@ -32,26 +32,25 @@ function sample end
 
 ### PointSet
 
-struct Point2fSet{S1<:AbstractVector{Point2f},S2<:AbstractVector{Int}} <: PointSet
+struct Point2fSet{S1<:AbstractVector{Point2f},S2<:Union{Nothing,AbstractVector{Int}}} <: PointSet
   points::S1
   multiplicity::S2
 end
 
 function sample(data::Point2fSet, xrange, yrange)
   length(data.points) < length(xrange) * length(yrange) && return data
-  ndx = findall(p -> xrange[1] ≤ p[1] ≤ xrange[end] && yrange[1] ≤ p[2] ≤ yrange[end], data.points)
-  length(ndx) < length(xrange) * length(yrange) && return data
-  a = zeros(Int, length(xrange), length(yrange))
-  for (p, n) ∈ @views zip(data.points[ndx], data.multiplicity[ndx])
-    i = round(Int, (p[1] - first(xrange)) / step(xrange)) + 1
-    j = round(Int, (p[2] - first(yrange)) / step(yrange)) + 1
-    a[i,j] += n
+  a = zeros(Bool, length(xrange), length(yrange))
+  Threads.@threads for p ∈ data.points
+    if xrange[1] ≤ p[1] ≤ xrange[end] && yrange[1] ≤ p[2] ≤ yrange[end]
+      i = round(Int, (p[1] - first(xrange)) / step(xrange)) + 1
+      j = round(Int, (p[2] - first(yrange)) / step(yrange)) + 1
+      a[i,j] = true
+    end
   end
-  ndx = findall(>(0), a)
+  ndx = findall(a)
   ii = map(x -> x.I[1], ndx)
   jj = map(x -> x.I[2], ndx)
-  m = a[ndx]
-  Point2fSet(Point2f.(xrange[ii], yrange[jj]), m)
+  Point2fSet(Point2f.(xrange[ii], yrange[jj]), nothing)
 end
 
 ### 1D sampled data
