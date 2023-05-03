@@ -25,6 +25,15 @@ samples at the locations specified by `xrange` and `yrange`.
 """
 function sample end
 
+"""
+    limits(data::DataSource)
+
+Returns a tuple `(xmin, xmax, ymin, ymax)` of x and y axis limits for the data.
+If a limit is not applicable or unknown for the data source, `nothing` may be
+returned for that entry.
+"""
+function limits end
+
 
 ###############################
 ### concrete implementations
@@ -51,6 +60,12 @@ function sample(data::Point2fSet, xrange, yrange)
   ii = map(x -> x.I[1], ndx)
   jj = map(x -> x.I[2], ndx)
   Point2fSet(Point2f.(xrange[ii], yrange[jj]), nothing)
+end
+
+function limits(data::Point2fSet)
+  xlims = extrema(map(p -> p[1], data.points))
+  ylims = extrema(map(p -> p[2], data.points))
+  (xlims[1], xlims[2], ylims[1], ylims[2])
 end
 
 ### 1D sampled data
@@ -82,6 +97,8 @@ function sample1D!(ys, data_x, data_y, xrange, n, pool, interpolate)
     ys[n*i-n+1:n*i] .= y
   end
 end
+
+limits(data::Samples1D) = (first(data.x), last(data.x), nothing, nothing)
 
 ### 2D sampled data
 
@@ -141,6 +158,8 @@ function sample2D!(z, xis, xxis, yis, yyis, parts, data_z, op)
   end
 end
 
+limits(data::Samples2D) = (first(data.x), last(data.x), first(data.y), last(data.y))
+
 ### 1D function
 
 struct Function1D{T} <: Continuous1D
@@ -148,6 +167,7 @@ struct Function1D{T} <: Continuous1D
 end
 
 sample(data::Function1D, xrange, yrange) = Samples1D(xrange, map(data.f, xrange))
+limits(data::Function2D) = (0.0, 1.0, nothing, nothing)
 
 ### 2D function
 
@@ -156,6 +176,7 @@ struct Function2D{T} <: Continuous2D
 end
 
 sample(data::Function2D, xrange, yrange) = Samples2D(xrange, yrange, [data.f(x,y) for x ∈ xrange, y ∈ yrange])
+limits(data::Function2D) = (0.0, 1.0, 0.0, 1.0)
 
 
 ##########################################
