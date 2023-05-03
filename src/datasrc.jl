@@ -162,21 +162,35 @@ limits(data::Samples2D) = (first(data.x), last(data.x), first(data.y), last(data
 
 ### 1D function
 
-struct Function1D{T} <: Continuous1D
+struct Function1D{T,L} <: Continuous1D
   f::T
+  xmin::L
+  xmax::L
+  function Function1D(f, xmin, xmax)
+    lims = promote(xmin, xmax)
+    new{typeof(f),eltype(lims)}(f, lims[1], lims[2])
+  end
 end
 
 sample(data::Function1D, xrange, yrange) = Samples1D(xrange, map(data.f, xrange))
-limits(data::Function2D) = (0.0, 1.0, nothing, nothing)
+limits(data::Function1D) = (data.xmin, data.xmax, nothing, nothing)
 
 ### 2D function
 
-struct Function2D{T} <: Continuous2D
+struct Function2D{T,L} <: Continuous2D
   f::T
+  xmin::L
+  xmax::L
+  ymin::L
+  ymax::L
+  function Function2D(f, xmin, xmax, ymin, ymax)
+    lims = promote(xmin, xmax, ymin, ymax)
+    new{typeof(f),eltype(lims)}(f, lims[1], lims[2], lims[3], lims[4])
+  end
 end
 
 sample(data::Function2D, xrange, yrange) = Samples2D(xrange, yrange, [data.f(x,y) for x ∈ xrange, y ∈ yrange])
-limits(data::Function2D) = (0.0, 1.0, 0.0, 1.0)
+limits(data::Function2D) = (data.xmin, data.xmax, data.ymin, data.ymax)
 
 
 ##########################################
