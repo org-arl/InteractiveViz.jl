@@ -36,6 +36,27 @@ iheatmap(g, f::Function, xmin=0.0, xmax=1.0, ymin=0.0, ymax=1.0; kwargs...) = iv
 iheatmap(g, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap(g, x, y, z; kwargs...), Samples2D(1:size(z,1), 1:size(z,2), z))
 iheatmap(g, x::AbstractRange, y::AbstractRange, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap(g, x, y, z; kwargs...), Samples2D(x, y, z))
 
+### figure-axis-plot container
+
+export repaint
+
+struct FigureAxisPlotData
+  fap::Makie.FigureAxisPlot
+  update::Function
+  params::Union{Nothing,Dict{Symbol,Any}}
+end
+
+function Base.getproperty(fapd::FigureAxisPlotData, sym::Symbol)
+  sym === :figure && return fapd.fap.figure
+  sym === :axis && return fapd.fap.axis
+  sym === :plot && return fapd.fap.plot
+  getfield(fapd, sym)
+end
+
+Base.display(fapd::FigureAxisPlotData; kwargs...) = display(fapd.fap; kwargs...)
+
+repaint(fapd::FigureAxisPlotData) = fapd.update()
+
 ### implementation
 
 function iviz(f, data::PointSet)
@@ -56,7 +77,7 @@ function iviz(f, data::PointSet)
   axislimits = current_axis().finallimits
   update(resolution[], axislimits[])
   onany(update, resolution, axislimits)
-  fap
+  FigureAxisPlotData(fap, () -> update(resolution[], axislimits[]), nothing)
 end
 
 function iviz(f, data::Continuous1D)
@@ -78,7 +99,7 @@ function iviz(f, data::Continuous1D)
   axislimits = current_axis().finallimits
   update(resolution[], axislimits[])
   onany(update, resolution, axislimits)
-  fap
+  FigureAxisPlotData(fap, () -> update(resolution[], axislimits[]), nothing)
 end
 
 function iviz(f, data::Continuous2D)
@@ -103,5 +124,5 @@ function iviz(f, data::Continuous2D)
   axislimits = current_axis().finallimits
   update(resolution[], axislimits[])
   onany(update, resolution, axislimits)
-  fap
+  FigureAxisPlotData(fap, () -> update(resolution[], axislimits[]), nothing)
 end
