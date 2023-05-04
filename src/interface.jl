@@ -40,22 +40,27 @@ iheatmap(g, x::AbstractRange, y::AbstractRange, z::AbstractMatrix; kwargs...) = 
 
 export repaint
 
-struct FigureAxisPlotData
-  fap::Makie.FigureAxisPlot
+struct FigureAxisPlotEx{T}
+  fap::T
   update::Function
   params::Union{Nothing,Dict{Symbol,Any}}
 end
 
-function Base.getproperty(fapd::FigureAxisPlotData, sym::Symbol)
+function Base.getproperty(fapd::FigureAxisPlotEx, sym::Symbol)
   sym === :figure && return fapd.fap.figure
   sym === :axis && return fapd.fap.axis
   sym === :plot && return fapd.fap.plot
   getfield(fapd, sym)
 end
 
-Base.display(fapd::FigureAxisPlotData; kwargs...) = display(fapd.fap; kwargs...)
+Base.display(fapd::FigureAxisPlotEx; kwargs...) = display(fapd.fap; kwargs...)
 
-repaint(fapd::FigureAxisPlotData) = fapd.update()
+function Base.show(io::IO, fapd::FigureAxisPlotEx)
+  fapd.fap isa Makie.FigureAxisPlot && display(fapd.fap)
+  show(io, fapd.fap)
+end
+
+repaint(fapd::FigureAxisPlotEx) = fapd.update()
 
 ### implementation
 
@@ -66,6 +71,10 @@ function iviz(f, data::PointSet)
   qdata = sample(data, xrange, yrange)
   pts = Observable(qdata.points)
   fap = f(pts)
+  if current_axis().limits[] == (nothing, nothing)
+    xlims!(current_axis(), lims[1], lims[2])
+    ylims!(current_axis(), lims[3], lims[4])
+  end
   reset_limits!(current_axis())
   function update(res, lims)
     xrange = range(lims.origin[1], lims.origin[1] + lims.widths[1]; length=round(Int, res[1]))
@@ -77,7 +86,7 @@ function iviz(f, data::PointSet)
   axislimits = current_axis().finallimits
   update(resolution[], axislimits[])
   onany(update, resolution, axislimits)
-  FigureAxisPlotData(fap, () -> update(resolution[], axislimits[]), nothing)
+  FigureAxisPlotEx(fap, () -> update(resolution[], axislimits[]), nothing)
 end
 
 function iviz(f, data::Continuous1D)
@@ -87,6 +96,9 @@ function iviz(f, data::Continuous1D)
   x = Observable(qdata.x)
   y = Observable(qdata.y)
   fap = f(x, y)
+  if current_axis().limits[] == (nothing, nothing)
+    xlims!(current_axis(), lims[1], lims[2])
+  end
   reset_limits!(current_axis())
   function update(res, lims)
     xrange = range(lims.origin[1], lims.origin[1] + lims.widths[1]; length=round(Int, res[1]))
@@ -99,7 +111,7 @@ function iviz(f, data::Continuous1D)
   axislimits = current_axis().finallimits
   update(resolution[], axislimits[])
   onany(update, resolution, axislimits)
-  FigureAxisPlotData(fap, () -> update(resolution[], axislimits[]), nothing)
+  FigureAxisPlotEx(fap, () -> update(resolution[], axislimits[]), nothing)
 end
 
 function iviz(f, data::Continuous2D)
@@ -111,6 +123,10 @@ function iviz(f, data::Continuous2D)
   y = Observable(qdata.y)
   z = Observable(qdata.z)
   fap = f(x, y, z)
+  if current_axis().limits[] == (nothing, nothing)
+    xlims!(current_axis(), lims[1], lims[2])
+    ylims!(current_axis(), lims[3], lims[4])
+  end
   reset_limits!(current_axis())
   function update(res, lims)
     xrange = range(lims.origin[1], lims.origin[1] + lims.widths[1]; length=round(Int, res[1]))
@@ -124,5 +140,5 @@ function iviz(f, data::Continuous2D)
   axislimits = current_axis().finallimits
   update(resolution[], axislimits[])
   onany(update, resolution, axislimits)
-  FigureAxisPlotData(fap, () -> update(resolution[], axislimits[]), nothing)
+  FigureAxisPlotEx(fap, () -> update(resolution[], axislimits[]), nothing)
 end
