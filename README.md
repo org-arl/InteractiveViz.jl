@@ -7,9 +7,9 @@ Interactive visualization tools for Julia
 
 Julia already has a rich set of plotting tools in the form of the [Plots](https://github.com/JuliaPlots/Plots.jl) and [Makie](https://github.com/JuliaPlots/Makie.jl) ecosystems, and various backends for these. So why another plotting package?
 
-_InteractiveViz_ is **not** a replacement for _Plots_ or _Makie_, but rather a graphics pipeline system developed on top of `Makie`. It has a few objectives:
+_InteractiveViz_ is **not** a replacement for _Plots_ or _Makie_, but rather a graphics pipeline system developed on top of Makie. It has a few objectives:
 
-- To provide a simple API to visualize large datasets (tens of millions of data points) easily.
+- To provide a simple API to visualize large or possibly infinite datasets (tens of millions of data points) easily.
 - To enable interactivity, and be responsive even with large amounts of data.
 - To render perceptually accurate summaries at large scale, allowing drill down to individual data points.
 - To allow generation of data points on demand through a graphics pipeline, requiring computation only at a level of detail appropriate for display at the viewing resolution. Additional data points can be generated on demand when zooming or panning.
@@ -25,25 +25,24 @@ julia>]
 pkg> add InteractiveViz
 ```
 
-### Usage
+### Quick start
 
-Detailed documentation for this package is still work-in-progress. The following examples should get you started:
+**NOTE: `InteractiveViz` API and internals changed in `v0.4`. If you're familiar with the older API, do read through the documentation again. The functionality has not changed much, but the `v0.4` uses the new Makie layout functionality and has improved its internal design to provide a more flexible data source API.**
 
 Let's start off visualizing a simple function of one variable:
 ```julia
 julia> using InteractiveViz
-julia> iplot(sin, 0, 100);
+julia> ilines(sin, 0, 100)
 ```
 
 ![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot1.png)
 
-This displays the `sin()` function with the initial view set to the _x_-range of 0 to 100. You can however, pan and zoom beyond this range. Use the scroll wheel on your mouse, scroll gesture on your trackpad, or the arrow keys on your keyboard to pan. Draw selection box with your mouse to zoom, or use the "-", "+", "[" and "]" keys to zoom out/in in _y_/_x_ axes.
-
-The first plot may take some time to show, as is common in the Julia ecosystem. If you want to speed this up, consider [precompiling Makie](https://github.com/JuliaPlots/Makie.jl#precompilation) into your system image.
+This displays the `sin()` function with the initial view set to the _x_-range of 0 to 100. You can however, pan and zoom (as you would do with a normal `GLMakie` window) beyond this range.
 
 Let's next try plotting 2 timeseries, each with 10 million points:
 ```julia
-julia> iplot(hcat(5*sin.(0.02π .* (1:10000000)), randn(10000000)));
+julia> ilines(5*sin.(0.02π .* (1:10000000)))
+julia> ilines!(randn(10000000))
 ```
 
 ![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot2a.png)
@@ -54,8 +53,8 @@ You can zoom and pan to see details:
 
 Next, let us visualize the famous Mandelbrot set:
 ```julia
-julia> using InteractiveViz.demo
-julia> iheatmap(mandelbrot, -2, 0.66, -1, 1; overlay=true, axescolor=:white, cursor=true);
+julia> using InteractiveViz.Demo
+julia> iheatmap(mandelbrot, -2, 0.66, -1, 1)
 ```
 
 ![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot3a.png)
@@ -66,56 +65,68 @@ Try zooming in to a tiny part of the image, and see the fractal nature of the im
 
 And how can we forget the Julia set?
 ```julia
-julia> using InteractiveViz.demo
-julia> iheatmap(julia, -2, 2, -1.75, 1.75; overlay=true, axescolor=:white, colormap=:magma);
+julia> iheatmap(julia, -2, 2, -1.75, 1.75; colormap=:magma)
 ```
 
 ![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot5.png)
 
-You could of course plot a large heatmap stored in a matrix as well.
+You could of course plot a large heatmap stored in a matrix as well:
 ```julia
-julia> iheatmap(randn(1000,10000), 0, 10, 0, 1);
+julia> iheatmap(range(0, 10; length=1000), range(0, 1; length=10000), randn(1000,10000))
 ```
-By default, when the data is reduced to screen resolution, the graphics pipeline takes the mean of all data points mapped to a single pixel. While this is typically what you want, if you were looking for tiny peaks in the image, they may be averaged out and lost. You can change the `pooling=maximum` to modify this behavior.
 
-Finally, let's try a scatter plot with a million points:
+Finally, let's try a scatter plot with ten million points:
 ```julia
-julia> iscatter(randn(1000000), randn(1000000); aggregate=true);
+julia> iscatter(randn(10_000_000), randn(10_000_000); markersize=3)
 ```
-The `aggregate=true` option uses the graphics pipeline to reduce the data to screen resolution for plotting. This produces a responsive plot, but reduces the options you have for overlaying, adding color, or using other markers. If you wanted to avail those, don't aggregate:
+and add on another hundred thousand ones:
 ```julia
-julia> iscatter!(randn(10000) .- 1, randn(10000) .- 1; color=:blue);
+julia> iscatter!(randn(1_000_000) .- 1, randn(1_000_000) .- 1; color=:black, markersize=4)
 ```
-The "!" versions of the plotting functions overlay the new plot on the previous plot, keeping the same _x_ and _y_ scales as far as possible.
+
+Try zooming into this plot and see that it remains responsive as you zoom down to each individual point, or zoom out to get a birds-eye view!
 
 ![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot4.png)
 
-You can add axes labels with keyword options `xlabel` and `ylabel`:
+While we haven't documented all the keyword options here, you'll find that all of the plot attributes for Makie work as options in _InteractiveViz_.
+
+All of Makie's layout API also works as expected:
 ```julia
-julia> iplot(sin, 0, 100; xlabel="time (samples)", ylabel="voltage");
+julia> using GLMakie
+julia> f = Figure()
+julia> p1 = iheatmap(f[1,1], julia, -2, 2, -1.75, 1.75; colormap=:magma)
+julia> p2 = iheatmap(f[2,1], mandelbrot, -2, 0.66, -1, 1)
+julia> Colorbar(f[1,2], p1.plot)
+julia> Colorbar(f[2,2], p2.plot)
+julia> p3 = ilines(f[1,3], sin, 0, 100; axis=(; limits=(0, 100, -1.5, 1.5)))
+julia> p4 = ilines(f[2,3], range(0, 100; length=10000), randn(10000))
+julia> linkxaxes!(p3.axis, p4.axis)
 ```
 
-While we haven't documented all the keyword options here, you'll find that most of the [plot attributes for Makie](http://makie.juliaplots.org/stable/plot-attributes.html) work as options in _InteractiveViz_.
+![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot6.png)
 
-While _InteractiveViz_ has much more to offer (multiple plots, linked axes, pan/zoom restrictions, etc) than the above use cases, the API is still evolving, and not yet documented. Other features such as colorbars and legends are work-in-progress and should be ready soon.
+### Data sources
 
-### Interactivity
+All `InteractiveViz` data sources are subtypes of the abstract `DataSource` type. Currently, three abstract subtypes of data sources are defined:
+- `Continuous1D` for continuous one-dimensional data (e.g. time series),
+- `Continuous2D` for continuous two-dimensional data (e.g. 2D topography heatmaps), and
+- `PointSet` for discrete points (e.g. scatter plots).
 
-Mouse or touchpad may be used for panning (scroll gestures) and zooming (select area to zoom, right click to reset zoom). All interactions are also supported with keyboard bindings:
-
+The API to implement for each data source simply consists of two methods:
 ```
--/+          y-axis zoom out/in
-[/]          x-axis zoom out/in
-</>          brightness decrease/increase (heatmaps)
-;/'          contrast decrease/increase (heatmaps)
-arrow keys   pan left/right/up/down
-0            reset zoom, pan, and color axis
+sample(data::DataSource, xrange::StepRangeLen, yrange::StepRangeLen)
+limits(data::DataSource)
 ```
 
-The keymap can be modified if desired (see [discussion](https://github.com/org-arl/InteractiveViz.jl/issues/1) for details).
+`sample()` samples the data source at a finite resolution and within a viewport represented by a `xrange` and `yrange`, and returns samples at the display resolution. The return type depends on the type of data source. Sampling a `PointSet` results in a `Point2fSet` of sample points. Sampling a `Continuous1D` results in a `Samples1D` of samples at the locations specified by `xrange`, or denser. Sampling a `Continuous2D` results in a `Samples2D` of samples at the locations specified by `xrange` and `yrange`.
 
-To enable data cursor (to get _x_, _y_ and _value_ (heatmaps) using mouse pointer), simply add `cursor=true` keyword argument to any of the plots.
+`limits()` returns a tuple `(xmin, xmax, ymin, ymax)` of default x and y axis limits for the data. If a limit is not applicable or unknown for the data source, `nothing` may be returned for that entry.
 
-### Feedback and comments
+The default implementations available include:
+- `Point2fSet`: vector of discrete 2D data points.
+- `Samples1D`: uniformly sampled 1D data in a vector, automatically interpolated or aggregated, as required.
+- `Samples2D`: uniformly sampled 2D data in a vector, automatically interpolated or aggregated, as required.
+- `Function1D`: 1D function that generated the data dynamically on demand.
+- `Function2D`: 2D function that generated the data dynamically on demand.
 
-This package is in beta, and we welcome feedback and comments. Post them as [issues](https://github.com/org-arl/InteractiveViz.jl/issues) against this repository.
+New types of data sources may be defined by the user. To use these, the underlying `iviz()` function has to be directly called on the data source. The `ilines()`, `iheatmap()` and `iscatter()` functions are simply convenience wrappers on the `iviz()` function.
