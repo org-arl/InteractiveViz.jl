@@ -54,6 +54,7 @@ function Base.getproperty(fapd::FigureAxisPlotEx, sym::Symbol)
 end
 
 Base.display(fapd::FigureAxisPlotEx; kwargs...) = display(fapd.fap; kwargs...)
+Base.display(screen::MakieScreen, fapd::FigureAxisPlotEx; kwargs...) = display(screen, fapd.fap; kwargs...)
 
 function Base.show(io::IO, fapd::FigureAxisPlotEx)
   fapd.fap isa Makie.FigureAxisPlot && display(fapd.fap)
