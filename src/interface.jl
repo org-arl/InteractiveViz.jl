@@ -60,6 +60,11 @@ function Base.show(io::IO, fapd::FigureAxisPlotEx)
   show(io, fapd.fap)
 end
 
+"""
+    repaint(fapd::FigureAxisPlotEx)
+
+Repaint a figure to update data that might have changed in the data source.
+"""
 repaint(fapd::FigureAxisPlotEx) = fapd.update()
 
 ### implementation
