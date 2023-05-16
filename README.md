@@ -35,7 +35,7 @@ julia> using InteractiveViz
 julia> ilines(sin, 0, 100)
 ```
 
-![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot1.png)
+![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot-1.png)
 
 This displays the `sin()` function with the initial view set to the _x_-range of 0 to 100. You can however, pan and zoom (as you would do with a normal `GLMakie` window) beyond this range.
 
@@ -45,11 +45,11 @@ julia> ilines(5*sin.(0.02π .* (1:10000000)))
 julia> ilines!(randn(10000000))
 ```
 
-![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot2a.png)
+![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot-2a.png)
 
 You can zoom and pan to see details:
 
-![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot2b.png)
+![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot-2b.png)
 
 Next, let us visualize the famous Mandelbrot set:
 ```julia
@@ -57,18 +57,18 @@ julia> using InteractiveViz.Demo
 julia> iheatmap(mandelbrot, -2, 0.66, -1, 1)
 ```
 
-![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot3a.png)
+![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot-3a.png)
 
 Try zooming in to a tiny part of the image, and see the fractal nature of the image render itself dynamically at full resolution!
 
-![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot3b.png)
+![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot-3b.png)
 
 And how can we forget the Julia set?
 ```julia
 julia> iheatmap(julia, -2, 2, -1.75, 1.75; colormap=:magma)
 ```
 
-![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot5.png)
+![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot-5.png)
 
 You could of course plot a large heatmap stored in a matrix as well:
 ```julia
@@ -86,7 +86,7 @@ julia> iscatter!(randn(1_000_000) .- 1, randn(1_000_000) .- 1; color=:black, mar
 
 Try zooming into this plot and see that it remains responsive as you zoom down to each individual point, or zoom out to get a birds-eye view!
 
-![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot4.png)
+![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot-4.png)
 
 While we haven't documented all the keyword options here, you'll find that all of the plot attributes for Makie work as options in _InteractiveViz_.
 
@@ -103,7 +103,7 @@ julia> p4 = ilines(f[2,3], range(0, 100; length=10000), randn(10000))
 julia> linkxaxes!(p3.axis, p4.axis)
 ```
 
-![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot6.png)
+![](https://raw.githubusercontent.com/org-arl/InteractiveViz.jl/master/docs/images/plot-6.png)
 
 ### Data sources
 
