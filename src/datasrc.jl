@@ -112,10 +112,10 @@ struct Samples2D{S1<:AbstractRange,S2<:AbstractMatrix} <: Continuous2D
   end
 end
 
-function sample(data::Samples2D, xrange::AbstractRange, yrange::AbstractRange; pool=max)
+function sample(data::Samples2D, xrange::AbstractRange, yrange::AbstractRange; pool=max, init=convert(eltype(data.z), -Inf))
   xrange = intersection(xrange, data.x)
   yrange = intersection(yrange, data.y)
-  z = zeros(eltype(data.z), length(xrange), length(yrange))
+  z = fill(init, length(xrange), length(yrange))
   Δx = step(xrange)
   if Δx == 0
     xis = 1:1
