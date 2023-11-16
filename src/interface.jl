@@ -1,6 +1,6 @@
 using GeometryBasics
 using FillArrays
-using GLMakie
+using Makie
 
 ### interface
 
