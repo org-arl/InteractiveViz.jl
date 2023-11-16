@@ -20,9 +20,22 @@ This package does not aim to provide comprehensive production quality plotting. 
 
 ### Installation
 
+Install InteractiveViz.jl with one of the Makie backends that support interactivity (GLMakie or WebGLMakie).
+
 ```julia
 julia>]
-pkg> add InteractiveViz
+pkg> add InteractiveViz GLMakie
+```
+
+If more than one Makie backend is available, switch between them in the usual way.
+
+```julia
+using GLMakie
+
+GLMakie.activate!()
+
+using WGLMakie
+WGLMakie.activate!()
 ```
 
 ### Quick start
@@ -31,7 +44,7 @@ pkg> add InteractiveViz
 
 Let's start off visualizing a simple function of one variable:
 ```julia
-julia> using InteractiveViz
+julia> using InteractiveViz, GLMakie
 julia> ilines(sin, 0, 100)
 ```
 
