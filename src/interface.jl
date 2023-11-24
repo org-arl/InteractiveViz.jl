@@ -91,7 +91,13 @@ function iviz(f, data::PointSet)
   resolution = current_axis().scene.camera.resolution
   axislimits = current_axis().finallimits
   update(resolution[], axislimits[])
-  onany(update, resolution, axislimits)
+
+  t = Timer(x -> x, 0.1)
+  onany(resolution, axislimits) do res, axlimits
+    close(t)
+    t = Timer(x -> update(res, axlimits), 0.4)
+  end
+
   FigureAxisPlotEx(fap, () -> update(resolution[], axislimits[]), nothing)
 end
 
@@ -116,7 +122,12 @@ function iviz(f, data::Continuous1D)
   resolution = current_axis().scene.camera.resolution
   axislimits = current_axis().finallimits
   update(resolution[], axislimits[])
-  onany(update, resolution, axislimits)
+  # onany(update, resolution, axislimits)
+  t = Timer(x -> x, 0.1)
+  onany(resolution, axislimits) do res, axlimits
+    close(t)
+    t = Timer(x -> update(res, axlimits), 0.4)
+  end
   FigureAxisPlotEx(fap, () -> update(resolution[], axislimits[]), nothing)
 end
 
@@ -145,10 +156,16 @@ function iviz(f, data::Continuous2D)
   resolution = current_axis().scene.camera.resolution
   axislimits = current_axis().finallimits
   update(resolution[], axislimits[])
-  onany(update, resolution, axislimits)
+  # onany(update, resolution, axislimits)
+  t = Timer(x -> x, 0.1)
+  onany(resolution, axislimits) do res, axlimits
+    close(t)
+    t = Timer(x -> update(res, axlimits), 0.4)
+  end
   FigureAxisPlotEx(fap, () -> update(resolution[], axislimits[]), nothing)
 end
 
-
+iheatmap!(g::FigureAxisPlotEx, f::Function, xmin=0.0, xmax=1.0, ymin=0.0, ymax=1.0; kwargs...) = iviz((x, y, z) -> heatmap!(g.axis, x, y, z; kwargs...), Function2D(f, xmin, xmax, ymin, ymax))
+iheatmap!(g::FigureAxisPlotEx, x::AbstractRange, y::AbstractRange, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap!(g.axis, x, y, z; kwargs...), Samples2D(x, y, z))
 iheatmap!(g::Axis, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap!(g, x, y, z; kwargs...), Samples2D(1:size(z,1), 1:size(z,2), z))
 iheatmap!(g::FigureAxisPlotEx, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap!(g.axis, x, y, z; kwargs...), Samples2D(1:size(z,1), 1:size(z,2), z))
