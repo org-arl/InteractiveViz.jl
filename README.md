@@ -31,7 +31,6 @@ If more than one Makie backend is available, switch between them in the usual wa
 
 ```julia
 using GLMakie
-
 GLMakie.activate!()
 
 using WGLMakie
