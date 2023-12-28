@@ -2,43 +2,8 @@ using GeometryBasics
 using FillArrays
 using Makie
 
-### interface
-
-export iscatter, ilines, iheatmap
-export iscatter!, ilines!, iheatmap!
-
-iscatter(xy::AbstractVector{Point2f}; kwargs...) = iviz(pts -> scatter(pts; kwargs...), Point2fSet(xy, nothing))
-iscatter(x::AbstractVector, y::AbstractVector; kwargs...) = iviz(pts -> scatter(pts; kwargs...), Point2fSet(Point2f.(x, y), nothing))
-iscatter(g, xy::AbstractVector{Point2f}; kwargs...) = iviz(pts -> scatter(g, pts; kwargs...), Point2fSet(xy, nothing))
-iscatter(g, x::AbstractVector, y::AbstractVector; kwargs...) = iviz(pts -> scatter(g, pts; kwargs...), Point2fSet(Point2f.(x, y), nothing))
-iscatter!(xy::AbstractVector{Point2f}; kwargs...) = iviz(pts -> scatter!(pts; kwargs...), Point2fSet(xy, nothing))
-iscatter!(x::AbstractVector, y::AbstractVector; kwargs...) = iviz(pts -> scatter!(pts; kwargs...), Point2fSet(Point2f.(x, y), nothing))
-iscatter!(g, xy::AbstractVector{Point2f}; kwargs...) = iviz(pts -> scatter!(g, pts; kwargs...), Point2fSet(xy, nothing))
-iscatter!(g, x::AbstractVector, y::AbstractVector; kwargs...) = iviz(pts -> scatter!(g, pts; kwargs...), Point2fSet(Point2f.(x, y), nothing))
-
-ilines(f::Function, xmin=0.0, xmax=1.0; kwargs...) = iviz((x, y) -> lines(x, y; kwargs...), Function1D(f, xmin, xmax))
-ilines(y::AbstractVector; kwargs...) = iviz((x, y) -> lines(x, y; kwargs...), Samples1D(eachindex(y), y))
-ilines(x::AbstractVector, y::AbstractVector; kwargs...) = iviz((x, y) -> lines(x, y; kwargs...), Samples1D(x, y))
-ilines(g, f::Function, xmin=0.0, xmax=1.0; kwargs...) = iviz((x, y) -> lines(g, x, y; kwargs...), Function1D(f, xmin, xmax))
-ilines(g, y::AbstractVector; kwargs...) = iviz((x, y) -> lines(g, x, y; kwargs...), Samples1D(eachindex(y), y))
-ilines(g, x::AbstractVector, y::AbstractVector; kwargs...) = iviz((x, y) -> lines(g, x, y; kwargs...), Samples1D(x, y))
-ilines!(f::Function, xmin=0.0, xmax=1.0; kwargs...) = iviz((x, y) -> lines!(x, y; kwargs...), Function1D(f, xmin, xmax))
-ilines!(y::AbstractVector; kwargs...) = iviz((x, y) -> lines!(x, y; kwargs...), Samples1D(eachindex(y), y))
-ilines!(x::AbstractRange, y::AbstractVector; kwargs...) = iviz((x, y) -> lines!(x, y; kwargs...), Samples1D(x, y))
-ilines!(g, f::Function, xmin=0.0, xmax=1.0; kwargs...) = iviz((x, y) -> lines!(g, x, y; kwargs...), Function1D(f, xmin, xmax))
-ilines!(g, y::AbstractVector; kwargs...) = iviz((x, y) -> lines!(g, x, y; kwargs...), Samples1D(eachindex(y), y))
-ilines!(g, x::AbstractRange, y::AbstractVector; kwargs...) = iviz((x, y) -> lines!(g, x, y; kwargs...), Samples1D(x, y))
-
-iheatmap(f::Function, xmin=0.0, xmax=1.0, ymin=0.0, ymax=1.0; kwargs...) = iviz((x, y, z) -> heatmap(x, y, z; kwargs...), Function2D(f, xmin, xmax, ymin, ymax))
-iheatmap(z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap(x, y, z; kwargs...), Samples2D(1:size(z, 1), 1:size(z, 2), z))
-iheatmap(x::AbstractRange, y::AbstractRange, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap(x, y, z; kwargs...), Samples2D(x, y, z))
-iheatmap(g, f::Function, xmin=0.0, xmax=1.0, ymin=0.0, ymax=1.0; kwargs...) = iviz((x, y, z) -> heatmap(g, x, y, z; kwargs...), Function2D(f, xmin, xmax, ymin, ymax))
-iheatmap(g, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap(g, x, y, z; kwargs...), Samples2D(1:size(z, 1), 1:size(z, 2), z))
-iheatmap(g, x::AbstractRange, y::AbstractRange, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap(g, x, y, z; kwargs...), Samples2D(x, y, z))
 
 ### figure-axis-plot container
-
-export repaint
 
 struct FigureAxisPlotEx{T}
     fap::T
@@ -166,7 +131,42 @@ function iviz(f, data::Continuous2D)
     return FigureAxisPlotEx(fap, () -> update(resolution[], axislimits[]), nothing)
 end
 
+### interface
+
+iscatter(xy::AbstractVector{Point2f}; kwargs...) = iviz(pts -> scatter(pts; kwargs...), Point2fSet(xy, nothing))
+iscatter(x::AbstractVector, y::AbstractVector; kwargs...) = iviz(pts -> scatter(pts; kwargs...), Point2fSet(Point2f.(x, y), nothing))
+iscatter(g, xy::AbstractVector{Point2f}; kwargs...) = iviz(pts -> scatter(g, pts; kwargs...), Point2fSet(xy, nothing))
+iscatter(g, x::AbstractVector, y::AbstractVector; kwargs...) = iviz(pts -> scatter(g, pts; kwargs...), Point2fSet(Point2f.(x, y), nothing))
+iscatter!(xy::AbstractVector{Point2f}; kwargs...) = iviz(pts -> scatter!(pts; kwargs...), Point2fSet(xy, nothing))
+iscatter!(x::AbstractVector, y::AbstractVector; kwargs...) = iviz(pts -> scatter!(pts; kwargs...), Point2fSet(Point2f.(x, y), nothing))
+iscatter!(g, xy::AbstractVector{Point2f}; kwargs...) = iviz(pts -> scatter!(g, pts; kwargs...), Point2fSet(xy, nothing))
+iscatter!(g, x::AbstractVector, y::AbstractVector; kwargs...) = iviz(pts -> scatter!(g, pts; kwargs...), Point2fSet(Point2f.(x, y), nothing))
+
+ilines(f::Function, xmin=0.0, xmax=1.0; kwargs...) = iviz((x, y) -> lines(x, y; kwargs...), Function1D(f, xmin, xmax))
+ilines(y::AbstractVector; kwargs...) = iviz((x, y) -> lines(x, y; kwargs...), Samples1D(eachindex(y), y))
+ilines(x::AbstractVector, y::AbstractVector; kwargs...) = iviz((x, y) -> lines(x, y; kwargs...), Samples1D(x, y))
+ilines(g, f::Function, xmin=0.0, xmax=1.0; kwargs...) = iviz((x, y) -> lines(g, x, y; kwargs...), Function1D(f, xmin, xmax))
+ilines(g, y::AbstractVector; kwargs...) = iviz((x, y) -> lines(g, x, y; kwargs...), Samples1D(eachindex(y), y))
+ilines(g, x::AbstractVector, y::AbstractVector; kwargs...) = iviz((x, y) -> lines(g, x, y; kwargs...), Samples1D(x, y))
+ilines!(f::Function, xmin=0.0, xmax=1.0; kwargs...) = iviz((x, y) -> lines!(x, y; kwargs...), Function1D(f, xmin, xmax))
+ilines!(y::AbstractVector; kwargs...) = iviz((x, y) -> lines!(x, y; kwargs...), Samples1D(eachindex(y), y))
+ilines!(x::AbstractRange, y::AbstractVector; kwargs...) = iviz((x, y) -> lines!(x, y; kwargs...), Samples1D(x, y))
+ilines!(g, f::Function, xmin=0.0, xmax=1.0; kwargs...) = iviz((x, y) -> lines!(g, x, y; kwargs...), Function1D(f, xmin, xmax))
+ilines!(g, y::AbstractVector; kwargs...) = iviz((x, y) -> lines!(g, x, y; kwargs...), Samples1D(eachindex(y), y))
+ilines!(g, x::AbstractRange, y::AbstractVector; kwargs...) = iviz((x, y) -> lines!(g, x, y; kwargs...), Samples1D(x, y))
+
+iheatmap(f::Function, xmin=0.0, xmax=1.0, ymin=0.0, ymax=1.0; kwargs...) = iviz((x, y, z) -> heatmap(x, y, z; kwargs...), Function2D(f, xmin, xmax, ymin, ymax))
+iheatmap(z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap(x, y, z; kwargs...), Samples2D(1:size(z, 1), 1:size(z, 2), z))
+iheatmap(x::AbstractRange, y::AbstractRange, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap(x, y, z; kwargs...), Samples2D(x, y, z))
+iheatmap(g, f::Function, xmin=0.0, xmax=1.0, ymin=0.0, ymax=1.0; kwargs...) = iviz((x, y, z) -> heatmap(g, x, y, z; kwargs...), Function2D(f, xmin, xmax, ymin, ymax))
+iheatmap(g, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap(g, x, y, z; kwargs...), Samples2D(1:size(z, 1), 1:size(z, 2), z))
+iheatmap(g, x::AbstractRange, y::AbstractRange, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap(g, x, y, z; kwargs...), Samples2D(x, y, z))
+
 iheatmap!(g::FigureAxisPlotEx, f::Function, xmin=0.0, xmax=1.0, ymin=0.0, ymax=1.0; kwargs...) = iviz((x, y, z) -> heatmap!(g.axis, x, y, z; kwargs...), Function2D(f, xmin, xmax, ymin, ymax))
 iheatmap!(g::FigureAxisPlotEx, x::AbstractRange, y::AbstractRange, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap!(g.axis, x, y, z; kwargs...), Samples2D(x, y, z))
 iheatmap!(g::Axis, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap!(g, x, y, z; kwargs...), Samples2D(1:size(z, 1), 1:size(z, 2), z))
 iheatmap!(g::FigureAxisPlotEx, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap!(g.axis, x, y, z; kwargs...), Samples2D(1:size(z, 1), 1:size(z, 2), z))
+
+export iscatter, ilines, iheatmap
+export iscatter!, ilines!, iheatmap!
+export repaint
