@@ -30,10 +30,10 @@ ilines!(g, y::AbstractVector; kwargs...) = iviz((x, y) -> lines!(g, x, y; kwargs
 ilines!(g, x::AbstractRange, y::AbstractVector; kwargs...) = iviz((x, y) -> lines!(g, x, y; kwargs...), Samples1D(x, y))
 
 iheatmap(f::Function, xmin=0.0, xmax=1.0, ymin=0.0, ymax=1.0; kwargs...) = iviz((x, y, z) -> heatmap(x, y, z; kwargs...), Function2D(f, xmin, xmax, ymin, ymax))
-iheatmap(z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap(x, y, z; kwargs...), Samples2D(1:size(z,1), 1:size(z,2), z))
+iheatmap(z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap(x, y, z; kwargs...), Samples2D(1:size(z, 1), 1:size(z, 2), z))
 iheatmap(x::AbstractRange, y::AbstractRange, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap(x, y, z; kwargs...), Samples2D(x, y, z))
 iheatmap(g, f::Function, xmin=0.0, xmax=1.0, ymin=0.0, ymax=1.0; kwargs...) = iviz((x, y, z) -> heatmap(g, x, y, z; kwargs...), Function2D(f, xmin, xmax, ymin, ymax))
-iheatmap(g, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap(g, x, y, z; kwargs...), Samples2D(1:size(z,1), 1:size(z,2), z))
+iheatmap(g, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap(g, x, y, z; kwargs...), Samples2D(1:size(z, 1), 1:size(z, 2), z))
 iheatmap(g, x::AbstractRange, y::AbstractRange, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap(g, x, y, z; kwargs...), Samples2D(x, y, z))
 
 ### figure-axis-plot container
@@ -41,24 +41,24 @@ iheatmap(g, x::AbstractRange, y::AbstractRange, z::AbstractMatrix; kwargs...) = 
 export repaint
 
 struct FigureAxisPlotEx{T}
-  fap::T
-  update::Function
-  params::Union{Nothing,Dict{Symbol,Any}}
+    fap::T
+    update::Function
+    params::Union{Nothing, Dict{Symbol, Any}}
 end
 
 function Base.getproperty(fapd::FigureAxisPlotEx, sym::Symbol)
-  sym === :figure && return fapd.fap.figure
-  sym === :axis && return fapd.fap.axis
-  sym === :plot && return fapd.fap.plot
-  getfield(fapd, sym)
+    sym === :figure && return fapd.fap.figure
+    sym === :axis && return fapd.fap.axis
+    sym === :plot && return fapd.fap.plot
+    return getfield(fapd, sym)
 end
 
 Base.display(fapd::FigureAxisPlotEx; kwargs...) = display(fapd.fap; kwargs...)
 Base.display(screen::MakieScreen, fapd::FigureAxisPlotEx; kwargs...) = display(screen, fapd.fap; kwargs...)
 
 function Base.show(io::IO, fapd::FigureAxisPlotEx)
-  fapd.fap isa Makie.FigureAxisPlot && display(fapd.fap)
-  show(io, fapd.fap)
+    fapd.fap isa Makie.FigureAxisPlot && display(fapd.fap)
+    return show(io, fapd.fap)
 end
 
 """
@@ -71,101 +71,102 @@ repaint(fapd::FigureAxisPlotEx) = fapd.update()
 ### implementation
 
 function iviz(f, data::PointSet)
-  lims = limits(data)
-  xrange = range(lims[1], lims[2]; length=2)
-  yrange = range(lims[3], lims[4]; length=2)
-  qdata = sample(data, xrange, yrange)
-  pts = Observable(qdata.points)
-  fap = f(pts)
-  if current_axis().limits[] == (nothing, nothing)
-    xlims!(current_axis(), lims[1], lims[2])
-    ylims!(current_axis(), lims[3], lims[4])
-  end
-  reset_limits!(current_axis())
-  function update(res, lims)
-    xrange = range(lims.origin[1], lims.origin[1] + lims.widths[1]; length=round(Int, res[1]))
-    yrange = range(lims.origin[2], lims.origin[2] + lims.widths[2]; length=round(Int, res[2]))
+    lims = limits(data)
+    xrange = range(lims[1], lims[2]; length=2)
+    yrange = range(lims[3], lims[4]; length=2)
     qdata = sample(data, xrange, yrange)
-    pts[] = qdata.points
-  end
-  resolution = current_axis().scene.camera.resolution
-  axislimits = current_axis().finallimits
-  update(resolution[], axislimits[])
+    pts = Observable(qdata.points)
+    fap = f(pts)
+    if current_axis().limits[] == (nothing, nothing)
+        xlims!(current_axis(), lims[1], lims[2])
+        ylims!(current_axis(), lims[3], lims[4])
+    end
+    reset_limits!(current_axis())
+    function update(res, lims)
+        xrange = range(lims.origin[1], lims.origin[1] + lims.widths[1]; length=round(Int, res[1]))
+        yrange = range(lims.origin[2], lims.origin[2] + lims.widths[2]; length=round(Int, res[2]))
+        qdata = sample(data, xrange, yrange)
+        return pts[] = qdata.points
+    end
+    resolution = current_axis().scene.camera.resolution
+    axislimits = current_axis().finallimits
+    update(resolution[], axislimits[])
 
-  t = Timer(x -> x, 0.1)
-  onany(resolution, axislimits) do res, axlimits
-    close(t)
-    t = Timer(x -> update(res, axlimits), 0.4)
-  end
+    t = Timer(x -> x, 0.1)
+    onany(resolution, axislimits) do res, axlimits
+        close(t)
+        t = Timer(x -> update(res, axlimits), 0.4)
+    end
 
-  FigureAxisPlotEx(fap, () -> update(resolution[], axislimits[]), nothing)
+    return FigureAxisPlotEx(fap, () -> update(resolution[], axislimits[]), nothing)
 end
 
 function iviz(f, data::Continuous1D)
-  lims = limits(data)
-  r = range(lims[1], lims[2]; length=2)
-  qdata = sample(data, r, nothing)
-  x = Observable(qdata.x)
-  y = Observable(qdata.y)
-  fap = f(x, y)
-  if current_axis().limits[] == (nothing, nothing)
-    xlims!(current_axis(), lims[1], lims[2])
-  end
-  reset_limits!(current_axis())
-  function update(res, lims)
-    xrange = range(lims.origin[1], lims.origin[1] + lims.widths[1]; length=round(Int, res[1]))
-    yrange = range(lims.origin[2], lims.origin[2] + lims.widths[2]; length=round(Int, res[2]))
-    qdata = sample(data, xrange, yrange)
-    x.val = qdata.x
-    y[] = qdata.y
-  end
-  resolution = current_axis().scene.camera.resolution
-  axislimits = current_axis().finallimits
-  update(resolution[], axislimits[])
-  # onany(update, resolution, axislimits)
-  t = Timer(x -> x, 0.1)
-  onany(resolution, axislimits) do res, axlimits
-    close(t)
-    t = Timer(x -> update(res, axlimits), 0.4)
-  end
-  FigureAxisPlotEx(fap, () -> update(resolution[], axislimits[]), nothing)
+    lims = limits(data)
+    r = range(lims[1], lims[2]; length=2)
+    qdata = sample(data, r, nothing)
+    x = Observable(qdata.x)
+    y = Observable(qdata.y)
+    fap = f(x, y)
+    if current_axis().limits[] == (nothing, nothing)
+        xlims!(current_axis(), lims[1], lims[2])
+    end
+    reset_limits!(current_axis())
+    function update(res, lims)
+        xrange = range(lims.origin[1], lims.origin[1] + lims.widths[1]; length=round(Int, res[1]))
+        yrange = range(lims.origin[2], lims.origin[2] + lims.widths[2]; length=round(Int, res[2]))
+        qdata = sample(data, xrange, yrange)
+        x.val = qdata.x
+        return y[] = qdata.y
+    end
+    resolution = current_axis().scene.camera.resolution
+    axislimits = current_axis().finallimits
+    update(resolution[], axislimits[])
+    # onany(update, resolution, axislimits)
+    t = Timer(x -> x, 0.1)
+    onany(resolution, axislimits) do res, axlimits
+        close(t)
+        t = Timer(x -> update(res, axlimits), 0.4)
+    end
+    return FigureAxisPlotEx(fap, () -> update(resolution[], axislimits[]), nothing)
 end
 
 function iviz(f, data::Continuous2D)
-  lims = limits(data)
-  rx = range(lims[1], lims[2]; length=2)
-  ry = range(lims[3], lims[4]; length=2)
-  qdata = sample(data, rx, ry)
-  x = Observable(qdata.x)
-  y = Observable(qdata.y)
-  z = Observable(qdata.z)
-  fap = f(x, y, z)
-  if current_axis().limits[] == (nothing, nothing)
-    xlims!(current_axis(), lims[1], lims[2])
-    ylims!(current_axis(), lims[3], lims[4])
-  end
-  reset_limits!(current_axis())
-  function update(res, lims)
-    xrange = range(lims.origin[1], lims.origin[1] + lims.widths[1]; length=round(Int, res[1]))
-    yrange = range(lims.origin[2], lims.origin[2] + lims.widths[2]; length=round(Int, res[2]))
-    qdata = sample(data, xrange, yrange)
-    x.val = qdata.x
-    y.val = qdata.y
-    z[] = qdata.z
-  end
-  resolution = current_axis().scene.camera.resolution
-  axislimits = current_axis().finallimits
-  update(resolution[], axislimits[])
-  # onany(update, resolution, axislimits)
-  t = Timer(x -> x, 0.1)
-  onany(resolution, axislimits) do res, axlimits
-    close(t)
-    t = Timer(x -> update(res, axlimits), 0.4)
-  end
-  FigureAxisPlotEx(fap, () -> update(resolution[], axislimits[]), nothing)
+    lims = limits(data)
+    rx = range(lims[1], lims[2]; length=2)
+    ry = range(lims[3], lims[4]; length=2)
+    qdata = sample(data, rx, ry)
+    x = Observable(qdata.x)
+    y = Observable(qdata.y)
+    z = Observable(qdata.z)
+    fap = f(x, y, z)
+    if current_axis().limits[] == (nothing, nothing)
+        xlims!(current_axis(), lims[1], lims[2])
+        ylims!(current_axis(), lims[3], lims[4])
+    end
+    reset_limits!(current_axis())
+    function update(res, lims)
+        xrange = range(lims.origin[1], lims.origin[1] + lims.widths[1]; length=round(Int, res[1]))
+        yrange = range(lims.origin[2], lims.origin[2] + lims.widths[2]; length=round(Int, res[2]))
+        qdata = sample(data, xrange, yrange)
+        x.val = qdata.x
+        y.val = qdata.y
+        return z[] = qdata.z
+    end
+    resolution = current_axis().scene.camera.resolution
+    axislimits = current_axis().finallimits
+    update(resolution[], axislimits[])
+    # onany(update, resolution, axislimits)
+    onany(resolution, axislimits) do res, axlimits
+        if @isdefined(t)
+            close(t)
+        end
+        t = Timer(x -> update(res, axlimits), 0.4)
+    end
+    return FigureAxisPlotEx(fap, () -> update(resolution[], axislimits[]), nothing)
 end
 
 iheatmap!(g::FigureAxisPlotEx, f::Function, xmin=0.0, xmax=1.0, ymin=0.0, ymax=1.0; kwargs...) = iviz((x, y, z) -> heatmap!(g.axis, x, y, z; kwargs...), Function2D(f, xmin, xmax, ymin, ymax))
 iheatmap!(g::FigureAxisPlotEx, x::AbstractRange, y::AbstractRange, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap!(g.axis, x, y, z; kwargs...), Samples2D(x, y, z))
-iheatmap!(g::Axis, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap!(g, x, y, z; kwargs...), Samples2D(1:size(z,1), 1:size(z,2), z))
-iheatmap!(g::FigureAxisPlotEx, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap!(g.axis, x, y, z; kwargs...), Samples2D(1:size(z,1), 1:size(z,2), z))
+iheatmap!(g::Axis, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap!(g, x, y, z; kwargs...), Samples2D(1:size(z, 1), 1:size(z, 2), z))
+iheatmap!(g::FigureAxisPlotEx, z::AbstractMatrix; kwargs...) = iviz((x, y, z) -> heatmap!(g.axis, x, y, z; kwargs...), Samples2D(1:size(z, 1), 1:size(z, 2), z))
