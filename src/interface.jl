@@ -35,6 +35,12 @@ repaint(fapd::FigureAxisPlotEx) = fapd.update()
 
 ### implementation
 
+# The methods below make use of `redraw_limit`.
+# When the user pans/zooms around the scene it can cause an excessive number of
+# updates, as the scene is redrawn for every movement causing image tearing.
+# Instead, we artificially limit the number of refreshes that occur.
+
+
 function iviz(f, data::PointSet)
     lims = limits(data)
     xrange = range(lims[1], lims[2]; length=2)
@@ -46,21 +52,25 @@ function iviz(f, data::PointSet)
         xlims!(current_axis(), lims[1], lims[2])
         ylims!(current_axis(), lims[3], lims[4])
     end
+
     reset_limits!(current_axis())
+
     function update(res, lims)
         xrange = range(lims.origin[1], lims.origin[1] + lims.widths[1]; length=round(Int, res[1]))
         yrange = range(lims.origin[2], lims.origin[2] + lims.widths[2]; length=round(Int, res[2]))
         qdata = sample(data, xrange, yrange)
         return pts[] = qdata.points
     end
+
     resolution = current_axis().scene.camera.resolution
     axislimits = current_axis().finallimits
     update(resolution[], axislimits[])
 
-    t = Timer(x -> x, 0.1)
     onany(resolution, axislimits) do res, axlimits
-        close(t)
-        t = Timer(x -> update(res, axlimits), 0.4)
+        if @isdefined(redraw_limit)
+            close(redraw_limit)
+        end
+        redraw_limit = Timer(x -> update(res, axlimits), 0.1)
     end
 
     return FigureAxisPlotEx(fap, () -> update(resolution[], axislimits[]), nothing)
@@ -73,10 +83,13 @@ function iviz(f, data::Continuous1D)
     x = Observable(qdata.x)
     y = Observable(qdata.y)
     fap = f(x, y)
+
     if current_axis().limits[] == (nothing, nothing)
         xlims!(current_axis(), lims[1], lims[2])
     end
+
     reset_limits!(current_axis())
+
     function update(res, lims)
         xrange = range(lims.origin[1], lims.origin[1] + lims.widths[1]; length=round(Int, res[1]))
         yrange = range(lims.origin[2], lims.origin[2] + lims.widths[2]; length=round(Int, res[2]))
@@ -84,15 +97,18 @@ function iviz(f, data::Continuous1D)
         x.val = qdata.x
         return y[] = qdata.y
     end
+
     resolution = current_axis().scene.camera.resolution
     axislimits = current_axis().finallimits
     update(resolution[], axislimits[])
-    # onany(update, resolution, axislimits)
-    t = Timer(x -> x, 0.1)
+
     onany(resolution, axislimits) do res, axlimits
-        close(t)
-        t = Timer(x -> update(res, axlimits), 0.4)
+        if @isdefined(redraw_limit)
+            close(redraw_limit)
+        end
+        redraw_limit = Timer(x -> update(res, axlimits), 0.1)
     end
+
     return FigureAxisPlotEx(fap, () -> update(resolution[], axislimits[]), nothing)
 end
 
@@ -105,11 +121,14 @@ function iviz(f, data::Continuous2D)
     y = Observable(qdata.y)
     z = Observable(qdata.z)
     fap = f(x, y, z)
+
     if current_axis().limits[] == (nothing, nothing)
         xlims!(current_axis(), lims[1], lims[2])
         ylims!(current_axis(), lims[3], lims[4])
     end
+
     reset_limits!(current_axis())
+
     function update(res, lims)
         xrange = range(lims.origin[1], lims.origin[1] + lims.widths[1]; length=round(Int, res[1]))
         yrange = range(lims.origin[2], lims.origin[2] + lims.widths[2]; length=round(Int, res[2]))
@@ -118,16 +137,18 @@ function iviz(f, data::Continuous2D)
         y.val = qdata.y
         return z[] = qdata.z
     end
+
     resolution = current_axis().scene.camera.resolution
     axislimits = current_axis().finallimits
     update(resolution[], axislimits[])
-    # onany(update, resolution, axislimits)
+
     onany(resolution, axislimits) do res, axlimits
-        if @isdefined(t)
-            close(t)
+        if @isdefined(redraw_limit)
+            close(redraw_limit)
         end
-        t = Timer(x -> update(res, axlimits), 0.4)
+        redraw_limit = Timer(x -> update(res, axlimits), 0.1)
     end
+
     return FigureAxisPlotEx(fap, () -> update(resolution[], axislimits[]), nothing)
 end
 
