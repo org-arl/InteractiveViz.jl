@@ -7,7 +7,7 @@ using Makie
 struct FigureAxisPlotEx{T}
   fap::T
   update::Function
-  params::Union{Nothing, Dict{Symbol, Any}}
+  params::Union{Nothing,Dict{Symbol,Any}}
 end
 
 function Base.getproperty(fapd::FigureAxisPlotEx, sym::Symbol)
